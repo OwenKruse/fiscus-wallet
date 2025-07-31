@@ -40,6 +40,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
 import { useRouter } from "next/navigation"
+import CalendarComponent from "@/components/calandar-date-range"
 
 function AppSidebar() {
   const menuItems = [
@@ -92,8 +93,8 @@ function AppSidebar() {
                   <DollarSign className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">FinanceApp</span>
-                  <span className="truncate text-xs">Personal Finance</span>
+                  <span className="truncate font-semibold">Wallet</span>
+                  <span className="truncate text-xs">From Fisucs Financial</span>
                 </div>
               </a>
             </SidebarMenuButton>
@@ -270,11 +271,8 @@ export default function FinanceDashboard() {
               <Button variant="ghost" size="icon">
                 <User className="h-5 w-5" />
               </Button>
-
-              <div className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-lg">
-                <Calendar className="h-4 w-4" />
-                <span className="text-sm">{dateRange}</span>
-              </div>
+            
+              <CalendarComponent dateRange={dateRange} onDateRangeChange={setDateRange} />
             </div>
           </div>
         </header>
@@ -345,13 +343,18 @@ export default function FinanceDashboard() {
                 </div>
                 <div className="text-2xl font-bold mb-1">$3,200</div>
                 <div className="h-12 flex items-end gap-1 mt-4">
-                  {Array.from({ length: 20 }, (_, i) => (
-                    <div
-                      key={i}
-                      className="bg-gray-800 flex-1 rounded-sm"
-                      style={{ height: `${Math.random() * 100}%` }}
-                    />
-                  ))}
+                  {Array.from({ length: 20 }, (_, i) => {
+                    // Use deterministic heights based on index to avoid hydration mismatch
+                    const heights = [45, 78, 23, 89, 56, 34, 67, 91, 12, 76, 43, 88, 29, 65, 82, 37, 71, 94, 18, 53];
+                    return (
+                      <div
+                        key={i}
+                        className="bg-gray-800 flex-1 rounded-sm"
+                        style={{ height: `${heights[i]}%` }}
+                      />
+                    );
+                  }
+                )}
                 </div>
               </CardContent>
             </Card>

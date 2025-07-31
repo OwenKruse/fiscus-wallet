@@ -45,7 +45,7 @@
     "embla-carousel-react": "latest",
     "geist": "latest",
     "input-otp": "latest",
-    "lucide-react": "^0.454.0",
+    "lucide-react": "^0.534.0",
     "next": "15.2.4",
     "next-themes": "latest",
     "react": "^19",
@@ -55,7 +55,7 @@
     "react-resizable-panels": "latest",
     "recharts": "latest",
     "sonner": "latest",
-    "tailwind-merge": "^2.5.5",
+    "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "latest",
     "zod": "^3.24.1"
