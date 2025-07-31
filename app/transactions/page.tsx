@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeft, Search, SortAsc, SortDesc } from "lucide-react"
+import { Search, SortAsc, SortDesc } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/app-sidebar"
 
 interface Transaction {
   id: number
@@ -266,112 +268,113 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => router.push("/")}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-xl font-semibold">Transactions</h1>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        {/* Header */}
+        <header className="bg-white border-b px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger className="-ml-1" />
+              <h1 className="text-xl font-semibold">Transactions</h1>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <div className="p-6">
-        {/* Filters and Search */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Filter & Sort</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    placeholder="Search transactions..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
+        <div className="p-6 bg-gray-50 min-h-screen">
+          {/* Filters and Search */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Filter & Sort</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Input
+                      placeholder="Search transactions..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
                 </div>
+
+                <Select value={filterType} onValueChange={(value: "all" | "Income" | "Expenses") => setFilterType(value)}>
+                  <SelectTrigger className="w-full md:w-[180px]">
+                    <SelectValue placeholder="Filter by type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="Income">Income</SelectItem>
+                    <SelectItem value="Expenses">Expenses</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={sortBy} onValueChange={(value: "date" | "amount" | "name") => setSortBy(value)}>
+                  <SelectTrigger className="w-full md:w-[180px]">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date">Date</SelectItem>
+                    <SelectItem value="amount">Amount</SelectItem>
+                    <SelectItem value="name">Name</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Button variant="outline" onClick={toggleSort} className="w-full md:w-auto bg-transparent">
+                  {sortOrder === "asc" ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
+                  <span className="ml-2">{sortOrder === "asc" ? "Ascending" : "Descending"}</span>
+                </Button>
               </div>
+            </CardContent>
+          </Card>
 
-              <Select value={filterType} onValueChange={(value: "all" | "Income" | "Expenses") => setFilterType(value)}>
-                <SelectTrigger className="w-full md:w-[180px]">
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="Income">Income</SelectItem>
-                  <SelectItem value="Expenses">Expenses</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={sortBy} onValueChange={(value: "date" | "amount" | "name") => setSortBy(value)}>
-                <SelectTrigger className="w-full md:w-[180px]">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="date">Date</SelectItem>
-                  <SelectItem value="amount">Amount</SelectItem>
-                  <SelectItem value="name">Name</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Button variant="outline" onClick={toggleSort} className="w-full md:w-auto bg-transparent">
-                {sortOrder === "asc" ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
-                <span className="ml-2">{sortOrder === "asc" ? "Ascending" : "Descending"}</span>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Transactions List */}
-        <Card>
-          <CardHeader>
-            <CardTitle>All Transactions ({filteredTransactions.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 max-h-[600px] overflow-y-auto">
-              {filteredTransactions.map((transaction) => (
-                <div
-                  key={transaction.id}
-                  className="flex items-center justify-between p-4 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer group border border-transparent hover:border-gray-200"
-                  onClick={() => handleTransactionClick(transaction)}
-                >
-                  <div className="flex items-center gap-4">
-                    <Avatar className="h-10 w-10 group-hover:scale-105 transition-transform">
-                      <AvatarFallback className={`${transaction.color} text-white`}>
-                        {transaction.name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium group-hover:text-primary transition-colors">{transaction.name}</div>
-                      <div className="text-sm text-gray-500">{transaction.category}</div>
-                      <div className="text-xs text-gray-400">{transaction.date}</div>
+          {/* Transactions List */}
+          <Card>
+            <CardHeader>
+              <CardTitle>All Transactions ({filteredTransactions.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                {filteredTransactions.map((transaction) => (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center justify-between p-4 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer group border border-transparent hover:border-gray-200"
+                    onClick={() => handleTransactionClick(transaction)}
+                  >
+                    <div className="flex items-center gap-4">
+                      <Avatar className="h-10 w-10 group-hover:scale-105 transition-transform">
+                        <AvatarFallback className={`${transaction.color} text-white`}>
+                          {transaction.name.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-medium group-hover:text-primary transition-colors">{transaction.name}</div>
+                        <div className="text-sm text-gray-500">{transaction.category}</div>
+                        <div className="text-xs text-gray-400">{transaction.date}</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`text-lg font-bold ${transaction.amount > 0 ? "text-green-600" : "text-red-600"}`}>
+                        {transaction.amount > 0 ? "+" : ""}${Math.abs(transaction.amount).toFixed(2)}
+                      </div>
+                      <Badge variant={transaction.type === "Income" ? "default" : "secondary"} className="text-xs">
+                        {transaction.type}
+                      </Badge>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className={`text-lg font-bold ${transaction.amount > 0 ? "text-green-600" : "text-red-600"}`}>
-                      {transaction.amount > 0 ? "+" : ""}${Math.abs(transaction.amount).toFixed(2)}
-                    </div>
-                    <Badge variant={transaction.type === "Income" ? "default" : "secondary"} className="text-xs">
-                      {transaction.type}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
+                ))}
 
-              {filteredTransactions.length === 0 && (
-                <div className="text-center py-8 text-gray-500">No transactions found matching your criteria.</div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                {filteredTransactions.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">No transactions found matching your criteria.</div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </SidebarInset>
 
       {/* Mobile Modal */}
       {isMobile && (
@@ -400,6 +403,6 @@ export default function TransactionsPage() {
           </SheetContent>
         </Sheet>
       )}
-    </div>
+    </SidebarProvider>
   )
 }

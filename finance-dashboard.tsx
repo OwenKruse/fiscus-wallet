@@ -1,177 +1,29 @@
 "use client"
 
+import React from "react"
+
 import { useState } from "react"
-import { ArrowDown, ArrowUp, Bell, Calendar, Plus, Search, TrendingUp, User } from "lucide-react"
+import { ArrowDown, ArrowUp, Bell, Plus, Search, TrendingUp, User } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarRail,
-  SidebarTrigger,
-} from "@/components/ui/sidebar"
-import {
-  BarChart3,
-  CreditCard,
-  DollarSign,
-  Home,
-  PieChart,
-  Receipt,
-  Settings,
-  Target,
-  Wallet,
-  ChevronUp,
-} from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { PieChart, Receipt, Target, Wallet } from "lucide-react"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
 import { useRouter } from "next/navigation"
 import CalendarComponent from "@/components/calandar-date-range"
-
-function AppSidebar() {
-  const menuItems = [
-    {
-      title: "Overview",
-      icon: Home,
-      url: "#",
-      isActive: true,
-    },
-    {
-      title: "Analytics",
-      icon: BarChart3,
-      url: "#",
-    },
-    {
-      title: "Transactions",
-      icon: Receipt,
-      url: "#",
-    },
-    {
-      title: "Cards",
-      icon: CreditCard,
-      url: "#",
-    },
-    {
-      title: "Wallet",
-      icon: Wallet,
-      url: "#",
-    },
-    {
-      title: "Goals",
-      icon: Target,
-      url: "#",
-    },
-    {
-      title: "Reports",
-      icon: PieChart,
-      url: "#",
-    },
-  ]
-
-  return (
-    <Sidebar>
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <a href="#" className="flex items-center gap-2">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <DollarSign className="size-4" />
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Wallet</span>
-                  <span className="truncate text-xs">From Fisucs Financial</span>
-                </div>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
-
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={item.isActive}>
-                    <a href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Settings</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <a href="#">
-                    <Settings />
-                    <span>Preferences</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton>
-                  <User className="size-4" />
-                  <span>John Doe</span>
-                  <ChevronUp className="ml-auto size-4" />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" className="w-[--radix-popper-anchor-width]">
-                <DropdownMenuItem>
-                  <span>Account</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <span>Billing</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <span>Sign out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
-  )
-}
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {AppSidebar} from "@/components/app-sidebar" // Import AppSidebar component
 
 export default function FinanceDashboard() {
   const [dateRange, setDateRange] = useState("03 Jul 2025 - 30 Jul 2025")
   const router = useRouter()
+  const [selectedAccount, setSelectedAccount] = useState(null)
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false)
 
   const handleTransactionClick = (transactionId: number) => {
     router.push(`/transactions?id=${transactionId}`)
@@ -229,6 +81,57 @@ export default function FinanceDashboard() {
     },
   ]
 
+  const accounts = [
+    {
+      id: 1,
+      name: "Checking Account",
+      type: "Checking",
+      balance: 45230,
+      accountNumber: "**** 2368",
+      fullAccountNumber: "1234 5678 9012 2368",
+      routingNumber: "021000021",
+      bank: "Fiscus Financial",
+      openedDate: "January 15, 2020",
+      interestRate: "0.05%",
+      icon: Wallet,
+      color: "bg-blue-500",
+      gradient: "from-blue-50 to-blue-100",
+      border: "border-blue-200",
+    },
+    {
+      id: 2,
+      name: "Savings Account",
+      type: "Savings",
+      balance: 52800,
+      accountNumber: "**** 7891",
+      fullAccountNumber: "1234 5678 9012 7891",
+      routingNumber: "021000021",
+      bank: "Fiscus Financial",
+      openedDate: "March 22, 2020",
+      interestRate: "2.15%",
+      icon: Target,
+      color: "bg-green-500",
+      gradient: "from-green-50 to-green-100",
+      border: "border-green-200",
+    },
+    {
+      id: 3,
+      name: "Investment Account",
+      type: "Investment",
+      balance: 27400,
+      accountNumber: "**** 4567",
+      fullAccountNumber: "1234 5678 9012 4567",
+      routingNumber: "021000021",
+      bank: "Fiscus Financial",
+      openedDate: "June 10, 2021",
+      interestRate: "Variable",
+      icon: PieChart,
+      color: "bg-purple-500",
+      gradient: "from-purple-50 to-purple-100",
+      border: "border-purple-200",
+    },
+  ]
+
   const monthlyExpenses = [
     { month: "Jan", amount: 15000 },
     { month: "Feb", amount: 25000 },
@@ -240,9 +143,14 @@ export default function FinanceDashboard() {
 
   const maxExpense = Math.max(...monthlyExpenses.map((e) => e.amount))
 
+  const handleAccountClick = (account) => {
+    setSelectedAccount(account)
+    setIsAccountModalOpen(true)
+  }
+
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar /> 
       <SidebarInset>
         {/* Header */}
         <header className="bg-white border-b px-6 py-4">
@@ -271,7 +179,7 @@ export default function FinanceDashboard() {
               <Button variant="ghost" size="icon">
                 <User className="h-5 w-5" />
               </Button>
-            
+
               <CalendarComponent dateRange={dateRange} onDateRangeChange={setDateRange} />
             </div>
           </div>
@@ -345,16 +253,11 @@ export default function FinanceDashboard() {
                 <div className="h-12 flex items-end gap-1 mt-4">
                   {Array.from({ length: 20 }, (_, i) => {
                     // Use deterministic heights based on index to avoid hydration mismatch
-                    const heights = [45, 78, 23, 89, 56, 34, 67, 91, 12, 76, 43, 88, 29, 65, 82, 37, 71, 94, 18, 53];
+                    const heights = [45, 78, 23, 89, 56, 34, 67, 91, 12, 76, 43, 88, 29, 65, 82, 37, 71, 94, 18, 53]
                     return (
-                      <div
-                        key={i}
-                        className="bg-gray-800 flex-1 rounded-sm"
-                        style={{ height: `${heights[i]}%` }}
-                      />
-                    );
-                  }
-                )}
+                      <div key={i} className="bg-gray-800 flex-1 rounded-sm" style={{ height: `${heights[i]}%` }} />
+                    )
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -366,57 +269,58 @@ export default function FinanceDashboard() {
               {/* Income Sources */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Income Sources</CardTitle>
+                  <CardTitle>Account Balances</CardTitle>
                   <Button variant="ghost" size="icon">
                     <ArrowUp className="h-4 w-4" />
                   </Button>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold mb-1">$92,000</div>
-                  <div className="flex items-center gap-1 text-sm text-green-600 mb-6">
-                    <ArrowUp className="h-3 w-3" />
-                    <span>15.5% compared to last month</span>
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <div className="text-2xl font-bold mb-1">$125,430</div>
+                      <div className="flex items-center gap-1 text-sm text-green-600">
+                        <ArrowUp className="h-3 w-3" />
+                        <span>12.5% compared to last month</span>
+                      </div>
+                    </div>
+                    <Button size="sm" className="bg-black text-white">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Account
+                    </Button>
                   </div>
 
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-black rounded-full"></div>
-                        <span className="text-sm">Rental</span>
-                      </div>
-                      <span className="text-sm font-medium">$35,000</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-black rounded-full"></div>
-                        <span className="text-sm">Investments</span>
-                      </div>
-                      <span className="text-sm font-medium">$28,000</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                        <span className="text-sm">Business</span>
-                      </div>
-                      <span className="text-sm font-medium">$18,000</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                        <span className="text-sm">Freelance</span>
-                      </div>
-                      <span className="text-sm font-medium">$11,000</span>
-                    </div>
+                    {accounts.map((account) => {
+                      const IconComponent = account.icon
+                      return (
+                        <div
+                          key={account.id}
+                          className={`flex items-center justify-between p-3 rounded-lg bg-gradient-to-r ${account.gradient} border ${account.border} cursor-pointer hover:shadow-md transition-all duration-200 group`}
+                          onClick={() => handleAccountClick(account)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`w-10 h-10 ${account.color} rounded-full flex items-center justify-center group-hover:scale-110 transition-transform`}
+                            >
+                              <IconComponent className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-sm">{account.name}</div>
+                              <div className="text-xs text-gray-500">{account.accountNumber}</div>
+                            </div>
+                          </div>
+                          <span className="text-sm font-bold">${account.balance.toLocaleString()}</span>
+                        </div>
+                      )
+                    })}
                   </div>
 
-                  <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <TrendingUp className="h-4 w-4" />
-                      <span>Passive income streams growing steadily.</span>
+                  <div className="mt-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border">
+                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                      <TrendingUp className="h-4 w-4 text-green-500" />
+                      <span className="font-medium">Total Portfolio Growth: +8.2%</span>
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      Automate your rental collection for better efficiency.
-                    </div>
+                    <div className="text-xs text-gray-500 mt-1">Your accounts are performing well this quarter.</div>
                   </div>
                 </CardContent>
               </Card>
@@ -650,6 +554,83 @@ export default function FinanceDashboard() {
           </div>
         </div>
       </SidebarInset>
+      <Dialog open={isAccountModalOpen} onOpenChange={setIsAccountModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              {selectedAccount && (
+                <>
+                  <div className={`w-10 h-10 ${selectedAccount.color} rounded-full flex items-center justify-center`}>
+                    {React.createElement(selectedAccount.icon, { className: "w-5 h-5 text-white" })}
+                  </div>
+                  {selectedAccount.name}
+                </>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedAccount && (
+            <div className="space-y-6">
+              {/* Account Balance */}
+              <div className="text-center p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg">
+                <div className="text-sm text-gray-600 mb-1">Current Balance</div>
+                <div className="text-3xl font-bold text-gray-900">${selectedAccount.balance.toLocaleString()}</div>
+              </div>
+
+              {/* Account Details */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm font-medium text-gray-600">Account Type</div>
+                    <div className="text-sm text-gray-900">{selectedAccount.type}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-600">Bank</div>
+                    <div className="text-sm text-gray-900">{selectedAccount.bank}</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm font-medium text-gray-600">Account Number</div>
+                    <div className="text-sm text-gray-900 font-mono">{selectedAccount.fullAccountNumber}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-600">Routing Number</div>
+                    <div className="text-sm text-gray-900 font-mono">{selectedAccount.routingNumber}</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm font-medium text-gray-600">Opened Date</div>
+                    <div className="text-sm text-gray-900">{selectedAccount.openedDate}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-600">Interest Rate</div>
+                    <div className="text-sm text-gray-900">{selectedAccount.interestRate}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                <Button className="flex-1 bg-transparent" variant="outline">
+                  <ArrowUp className="h-4 w-4 mr-2" />
+                  Transfer
+                </Button>
+                <Button className="flex-1 bg-transparent" variant="outline">
+                  <ArrowDown className="h-4 w-4 mr-2" />
+                  Deposit
+                </Button>
+                <Button className="flex-1 bg-transparent" variant="outline">
+                  <Receipt className="h-4 w-4 mr-2" />
+                  Statements
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </SidebarProvider>
   )
 }
