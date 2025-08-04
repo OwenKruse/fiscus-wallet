@@ -954,7 +954,7 @@ export default function AnalyticsPage() {
                                                     />
                                                     <ChartTooltip
                                                         content={<ChartTooltipContent />}
-                                                        formatter={(value: any) => [`$${value}`, "Spent"]}
+                                                        formatter={(value: any) => [`$${value.toFixed(2)}`, " Spent"]}
                                                     />
                                                     <Bar dataKey="amount" fill="url(#colorAmount)" radius={[8, 8, 0, 0]} />
                                                 </BarChart>
