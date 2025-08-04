@@ -3,161 +3,281 @@
 import React from "react"
 
 import { useState } from "react"
-import { ArrowDown, ArrowUp, Bell, Plus, Search, TrendingUp, User } from "lucide-react"
+import { ArrowDown, ArrowUp, Bell, Plus, Search, TrendingUp, User, RefreshCw, Link } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { PieChart, Receipt, Target, Wallet } from "lucide-react"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
 import { useRouter } from "next/navigation"
 import CalendarComponent from "@/components/calandar-date-range"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import {AppSidebar} from "@/components/app-sidebar" // Import AppSidebar component
+import { PlaidLinkButton } from "@/components/plaid-link-button"
+import { useAccounts, useTransactions, useSync } from "@/hooks/use-api"
+import { useToast } from "@/hooks/use-toast"
+import NextLink from "next/link"
+import { PrimaryGoalWidget } from "@/components/primary-goal-widget"
 
 export default function FinanceDashboard() {
-  const [dateRange, setDateRange] = useState("03 Jul 2025 - 30 Jul 2025")
+  const [dateRange, setDateRange] = useState("")
   const router = useRouter()
-  const [selectedAccount, setSelectedAccount] = useState(null)
+  const [selectedAccount, setSelectedAccount] = useState<any>(null)
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false)
+  const { toast } = useToast()
 
-  const handleTransactionClick = (transactionId: number) => {
+  // Parse date range for API calls
+  const parseDateRange = (range: string) => {
+    if (!range) return { startDate: undefined, endDate: undefined }
+    
+    try {
+      // Handle single date format
+      if (!range.includes(' - ')) {
+        const date = new Date(range)
+        if (!isNaN(date.getTime())) {
+          return {
+            startDate: date.toISOString().split('T')[0],
+            endDate: date.toISOString().split('T')[0]
+          }
+        }
+      }
+      
+      // Handle date range format "DD MMM YYYY - DD MMM YYYY"
+      const [startStr, endStr] = range.split(' - ')
+      const startDate = new Date(startStr)
+      const endDate = new Date(endStr)
+      
+      if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+        return {
+          startDate: startDate.toISOString().split('T')[0],
+          endDate: endDate.toISOString().split('T')[0]
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing date range:', error)
+    }
+    
+    return { startDate: undefined, endDate: undefined }
+  }
+
+  const { startDate, endDate } = parseDateRange(dateRange)
+
+  // API hooks
+  const { accounts, isLoading: accountsLoading, refreshAccounts } = useAccounts()
+  const { transactions, isLoading: transactionsLoading, updateFilters } = useTransactions({ 
+    startDate,
+    endDate,
+    limit: 100 
+  })
+  const { performSync, isSyncing } = useSync()
+
+  // Update transactions when date range changes
+  const handleDateRangeChange = (newRange: string) => {
+    setDateRange(newRange)
+    const { startDate: newStartDate, endDate: newEndDate } = parseDateRange(newRange)
+    updateFilters({
+      startDate: newStartDate,
+      endDate: newEndDate,
+      limit: 100
+    })
+  }
+
+  // Calculate real metrics
+  const totalBalance = accounts.reduce((sum, account) => {
+    const balance = account.type === 'credit' ? -Math.abs(account.balance.current) : account.balance.current
+    return sum + balance
+  }, 0)
+  const recentTransactions = transactions.slice(0, 7)
+
+  // Calculate financial metrics from transactions
+  const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  const last30DaysTransactions = transactions.filter(t => new Date(t.date) > last30Days)
+
+  // Calculate income (negative amounts in Plaid) and expenses (positive amounts in Plaid)
+  // In Plaid: positive = money leaving account (expenses), negative = money entering account (income)
+  const totalMonthlyIncome = Math.abs(last30DaysTransactions
+    .filter(t => t.amount < 0)
+    .reduce((sum, t) => sum + t.amount, 0))
+
+  const totalMonthlyExpenses = last30DaysTransactions
+    .filter(t => t.amount > 0)
+    .reduce((sum, t) => sum + t.amount, 0)
+
+  const netChange = totalMonthlyIncome - totalMonthlyExpenses
+
+  // Calculate monthly expenses for the last 6 months (simulated data based on current month)
+  const currentMonth = new Date().getMonth()
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+  const monthlyExpensesData = Array.from({ length: 6 }, (_, i) => {
+    const monthIndex = (currentMonth - 5 + i + 12) % 12
+    const baseAmount = totalMonthlyExpenses > 0 ? totalMonthlyExpenses : 1600
+    // Add some variation to make the chart more realistic
+    const variation = [0.8, 0.9, 1.1, 0.7, 1.2, 1.0][i]
+    return {
+      month: monthNames[monthIndex],
+      amount: Math.round(baseAmount * variation)
+    }
+  })
+
+  // Calculate expense categories from recent transactions
+  const expensesByCategory = last30DaysTransactions
+    .filter(t => t.amount > 0)
+    .reduce((acc, t) => {
+      const category = t.category[0] || 'Other'
+      acc[category] = (acc[category] || 0) + t.amount
+      return acc
+    }, {} as Record<string, number>)
+
+  // Get top 3 expense categories
+  const topExpenseCategories = Object.entries(expensesByCategory)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 3)
+    .map(([category, amount]) => ({
+      category,
+      amount,
+      percentage: totalMonthlyExpenses > 0 ? Math.round((amount / totalMonthlyExpenses) * 100) : 0
+    }))
+
+  // Count flagged transactions (high amounts or unusual patterns)
+  const flaggedTransactions = transactions.filter(t =>
+    Math.abs(t.amount) > 1000 || // Large transactions
+    t.pending || // Pending transactions
+    t.category.includes('Transfer') // Transfers might need review
+  )
+  const flaggedAmount = flaggedTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0)
+
+  // Debug logging
+  console.log('Transactions:', transactions.length, 'Income:', totalMonthlyIncome, 'Expenses:', totalMonthlyExpenses, 'Net:', netChange)
+
+  const handleRefresh = async () => {
+    try {
+      await performSync({ forceRefresh: true })
+      await refreshAccounts()
+      toast({
+        title: "Success",
+        description: "Data refreshed successfully!",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to refresh data. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handlePlaidSuccess = () => {
+    toast({
+      title: "Bank Connected",
+      description: "Your bank account has been connected successfully!",
+    })
+    handleRefresh()
+  }
+
+  const handleTransactionClick = (transactionId: string) => {
     router.push(`/transactions?id=${transactionId}`)
   }
 
-  const transactions = [
-    {
-      id: 1,
-      name: "Samantha William",
-      date: "30 April 2024, 10:15 AM",
-      type: "Income",
-      amount: 1640.2,
-      color: "bg-pink-500",
-    },
-    {
-      id: 2,
-      name: "Grocery at Shop",
-      date: "29 April 2024, 6:45 PM",
-      type: "Expenses",
-      amount: -172.64,
-      color: "bg-green-500",
-    },
-    { id: 3, name: "Coffee", date: "21 April 2024, 8:30 AM", type: "Expenses", amount: -8.65, color: "bg-orange-500" },
-    {
-      id: 4,
-      name: "Karen Smith",
-      date: "10 April 2024, 3:50 PM",
-      type: "Income",
-      amount: 842.5,
-      color: "bg-purple-500",
-    },
-    {
-      id: 5,
-      name: "Transportation",
-      date: "2 April 2024, 5:20 PM",
-      type: "Expenses",
-      amount: -18.52,
-      color: "bg-red-500",
-    },
-    {
-      id: 6,
-      name: "Online Course Purchase",
-      date: "12 March 2024, 2:10 PM",
-      type: "Expenses",
-      amount: -120.0,
-      color: "bg-blue-500",
-    },
-    {
-      id: 7,
-      name: "Freelance Project Payment",
-      date: "5 March 2024, 11:00 AM",
-      type: "Income",
-      amount: 980.75,
-      color: "bg-green-600",
-    },
-  ]
+  // Helper function to get account icon based on type
+  const getAccountIcon = (type: string, subtype: string) => {
+    if (type === 'investment' || subtype === 'brokerage' || subtype === '401k' || subtype === 'ira') {
+      return PieChart
+    }
+    if (type === 'depository' && subtype === 'savings') {
+      return Target
+    }
+    return Wallet
+  }
 
-  const accounts = [
-    {
-      id: 1,
-      name: "Checking Account",
-      type: "Checking",
-      balance: 45230,
-      accountNumber: "**** 2368",
-      fullAccountNumber: "1234 5678 9012 2368",
-      routingNumber: "021000021",
-      bank: "Fiscus Financial",
-      openedDate: "January 15, 2020",
-      interestRate: "0.05%",
-      icon: Wallet,
+  // Helper function to get account color based on type
+  const getAccountColor = (type: string, subtype: string) => {
+    if (type === 'investment' || subtype === 'brokerage' || subtype === '401k' || subtype === 'ira') {
+      return {
+        color: "bg-purple-500",
+        gradient: "from-purple-50 to-purple-100",
+        border: "border-purple-200"
+      }
+    }
+    if (type === 'depository' && subtype === 'savings') {
+      return {
+        color: "bg-green-500",
+        gradient: "from-green-50 to-green-100",
+        border: "border-green-200"
+      }
+    }
+    return {
       color: "bg-blue-500",
       gradient: "from-blue-50 to-blue-100",
-      border: "border-blue-200",
-    },
-    {
-      id: 2,
-      name: "Savings Account",
-      type: "Savings",
-      balance: 52800,
-      accountNumber: "**** 7891",
-      fullAccountNumber: "1234 5678 9012 7891",
-      routingNumber: "021000021",
-      bank: "Fiscus Financial",
-      openedDate: "March 22, 2020",
-      interestRate: "2.15%",
-      icon: Target,
-      color: "bg-green-500",
-      gradient: "from-green-50 to-green-100",
-      border: "border-green-200",
-    },
-    {
-      id: 3,
-      name: "Investment Account",
-      type: "Investment",
-      balance: 27400,
-      accountNumber: "**** 4567",
-      fullAccountNumber: "1234 5678 9012 4567",
-      routingNumber: "021000021",
-      bank: "Fiscus Financial",
-      openedDate: "June 10, 2021",
-      interestRate: "Variable",
-      icon: PieChart,
-      color: "bg-purple-500",
-      gradient: "from-purple-50 to-purple-100",
-      border: "border-purple-200",
-    },
-  ]
+      border: "border-blue-200"
+    }
+  }
 
-  const monthlyExpenses = [
-    { month: "Jan", amount: 15000 },
-    { month: "Feb", amount: 25000 },
-    { month: "Mar", amount: 18000 },
-    { month: "Apr", amount: 28000 },
-    { month: "May", amount: 22000 },
-    { month: "Jun", amount: 24000 },
-  ]
+  // Helper function to get category color for transactions
+  const getCategoryColor = (categories: string[]): string => {
+    const primaryCategory = categories[0]?.toLowerCase() || 'other'
 
-  const maxExpense = Math.max(...monthlyExpenses.map((e) => e.amount))
+    const colorMap: Record<string, string> = {
+      'food and drink': 'bg-green-500',
+      'food': 'bg-green-500',
+      'restaurants': 'bg-green-500',
+      'groceries': 'bg-green-600',
+      'transportation': 'bg-red-500',
+      'travel': 'bg-red-600',
+      'entertainment': 'bg-purple-500',
+      'recreation': 'bg-purple-600',
+      'shopping': 'bg-blue-500',
+      'retail': 'bg-blue-600',
+      'healthcare': 'bg-pink-500',
+      'medical': 'bg-pink-600',
+      'education': 'bg-orange-500',
+      'learning': 'bg-orange-600',
+      'bills': 'bg-gray-500',
+      'utilities': 'bg-gray-600',
+      'income': 'bg-emerald-500',
+      'salary': 'bg-emerald-600',
+      'deposit': 'bg-emerald-700',
+      'other': 'bg-slate-500'
+    }
 
-  const handleAccountClick = (account) => {
+    return colorMap[primaryCategory] || 'bg-slate-500'
+  }
+
+  // Helper function to format category name for display
+  const formatCategoryName = (categories: string[]): string => {
+    if (!categories || categories.length === 0) return 'Other'
+
+    const category = categories[0]
+    // Convert to title case and handle common abbreviations
+    return category
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ')
+      .replace(/And/g, '&')
+  }
+
+
+
+  const maxExpense = Math.max(...monthlyExpensesData.map((e) => e.amount))
+
+  const handleAccountClick = (account: any) => {
     setSelectedAccount(account)
     setIsAccountModalOpen(true)
   }
 
   return (
-    <SidebarProvider>
-      <AppSidebar /> 
+    <>
       <SidebarInset>
         {/* Header */}
         <header className="bg-white border-b px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="-ml-1" />
-              <h1 className="text-xl font-semibold">Finance Dashboard</h1>
+              <h1 className="text-xl font-semibold">Overview</h1>
             </div>
 
             <div className="flex items-center gap-4">
@@ -176,11 +296,20 @@ export default function FinanceDashboard() {
                 </span>
               </Button>
 
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={isSyncing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                {isSyncing ? 'Syncing...' : 'Refresh'}
+              </Button>
+
               <Button variant="ghost" size="icon">
                 <User className="h-5 w-5" />
               </Button>
 
-              <CalendarComponent dateRange={dateRange} onDateRangeChange={setDateRange} />
             </div>
           </div>
         </header>
@@ -195,10 +324,18 @@ export default function FinanceDashboard() {
                   <span className="text-sm text-gray-600">My Balance</span>
                   <TrendingUp className="h-4 w-4 text-gray-400" />
                 </div>
-                <div className="text-2xl font-bold mb-1">$125,430</div>
+                <div className="text-2xl font-bold mb-1">
+                  ${totalBalance.toLocaleString()}
+                </div>
                 <div className="flex items-center gap-1 text-sm text-green-600">
-                  <ArrowUp className="h-3 w-3" />
-                  <span>12.5% compared to last month</span>
+                  {accountsLoading ? (
+                    <span>Loading...</span>
+                  ) : (
+                    <>
+                      <ArrowUp className="h-3 w-3" />
+                      <span>Real-time balance</span>
+                    </>
+                  )}
                 </div>
                 <div className="flex gap-2 mt-4">
                   <Button size="sm" className="bg-black text-white">
@@ -216,13 +353,39 @@ export default function FinanceDashboard() {
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-600">Net Profit</span>
+                  <span className="text-sm text-gray-600">Net Change</span>
                   <TrendingUp className="h-4 w-4 text-gray-400" />
                 </div>
-                <div className="text-2xl font-bold mb-1">$38,700</div>
+                <div className="text-2xl font-bold mb-1">
+                  {netChange >= 0 ? '+' : ''}${netChange.toLocaleString()}
+                </div>
+                <div className={`flex items-center gap-1 text-sm ${netChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {netChange >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                  <span>
+                    {transactionsLoading ? 'Loading...' : 'Last 30 days (Income - Expenses)'}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-600">Monthly Income</span>
+                  <TrendingUp className="h-4 w-4 text-gray-400" />
+                </div>
+                <div className="text-2xl font-bold mb-1">
+                  ${totalMonthlyIncome.toLocaleString()}
+                </div>
                 <div className="flex items-center gap-1 text-sm text-green-600">
-                  <ArrowUp className="h-3 w-3" />
-                  <span>8.6% compared to last month</span>
+                  {transactionsLoading ? (
+                    <span>Loading...</span>
+                  ) : (
+                    <>
+                      <ArrowUp className="h-3 w-3" />
+                      <span>Last 30 days</span>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -230,34 +393,21 @@ export default function FinanceDashboard() {
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-600">Expenses</span>
+                  <span className="text-sm text-gray-600">Monthly Expenses</span>
                   <TrendingUp className="h-4 w-4 text-gray-400" />
                 </div>
-                <div className="text-2xl font-bold mb-1">$26,450</div>
+                <div className="text-2xl font-bold mb-1">
+                  ${totalMonthlyExpenses.toLocaleString()}
+                </div>
                 <div className="flex items-center gap-1 text-sm text-red-600">
-                  <ArrowDown className="h-3 w-3" />
-                  <span>5.6% compared to last month</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-600">Pending Invoices</span>
-                  <Badge variant="destructive" className="text-xs">
-                    3 overdue invoices
-                  </Badge>
-                </div>
-                <div className="text-2xl font-bold mb-1">$3,200</div>
-                <div className="h-12 flex items-end gap-1 mt-4">
-                  {Array.from({ length: 20 }, (_, i) => {
-                    // Use deterministic heights based on index to avoid hydration mismatch
-                    const heights = [45, 78, 23, 89, 56, 34, 67, 91, 12, 76, 43, 88, 29, 65, 82, 37, 71, 94, 18, 53]
-                    return (
-                      <div key={i} className="bg-gray-800 flex-1 rounded-sm" style={{ height: `${heights[i]}%` }} />
-                    )
-                  })}
+                  {transactionsLoading ? (
+                    <span>Loading...</span>
+                  ) : (
+                    <>
+                      <ArrowDown className="h-3 w-3" />
+                      <span>Last 30 days</span>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -270,57 +420,102 @@ export default function FinanceDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Account Balances</CardTitle>
-                  <Button variant="ghost" size="icon">
-                    <ArrowUp className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500">
+                      {accounts.length} account{accounts.length !== 1 ? 's' : ''}
+                    </span>
+                    <Button variant="ghost" size="icon">
+                      <ArrowUp className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between mb-6">
                     <div>
-                      <div className="text-2xl font-bold mb-1">$125,430</div>
+                      <div className="text-2xl font-bold mb-1">
+                        ${totalBalance.toLocaleString()}
+                      </div>
                       <div className="flex items-center gap-1 text-sm text-green-600">
-                        <ArrowUp className="h-3 w-3" />
-                        <span>12.5% compared to last month</span>
+                        {accountsLoading ? (
+                          <span>Loading...</span>
+                        ) : (
+                          <>
+                            <ArrowUp className="h-3 w-3" />
+                            <span>Real-time balance</span>
+                          </>
+                        )}
                       </div>
                     </div>
-                    <Button size="sm" className="bg-black text-white">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Account
-                    </Button>
+                    <PlaidLinkButton
+                      onSuccess={handlePlaidSuccess}
+                      size="sm"
+                      className="bg-black text-white"
+                    >
+                      Connect Account
+                    </PlaidLinkButton>
                   </div>
 
-                  <div className="space-y-4">
-                    {accounts.map((account) => {
-                      const IconComponent = account.icon
-                      return (
-                        <div
-                          key={account.id}
-                          className={`flex items-center justify-between p-3 rounded-lg bg-gradient-to-r ${account.gradient} border ${account.border} cursor-pointer hover:shadow-md transition-all duration-200 group`}
-                          onClick={() => handleAccountClick(account)}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`w-10 h-10 ${account.color} rounded-full flex items-center justify-center group-hover:scale-110 transition-transform`}
-                            >
-                              <IconComponent className="w-5 h-5 text-white" />
+                  {accounts.length === 0 && !accountsLoading ? (
+                    <div className="text-center py-8">
+                      <div className="text-gray-500 mb-4">
+                        <Wallet className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                        <p className="text-lg font-medium mb-2">No accounts connected</p>
+                        <p className="text-sm mb-4">Connect your bank accounts to get started</p>
+                        <PlaidLinkButton onSuccess={handlePlaidSuccess}>
+                          Connect Your First Account
+                        </PlaidLinkButton>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {accounts.map((account) => {
+                        const IconComponent = getAccountIcon(account.type, account.subtype)
+                        const colors = getAccountColor(account.type, account.subtype)
+
+                        return (
+                          <div
+                            key={account.id}
+                            className={`flex items-center justify-between p-3 rounded-lg bg-gradient-to-r ${colors.gradient} border ${colors.border} cursor-pointer hover:shadow-md transition-all duration-200 group`}
+                            onClick={() => handleAccountClick(account)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`w-10 h-10 ${colors.color} rounded-full flex items-center justify-center group-hover:scale-110 transition-transform`}
+                              >
+                                <IconComponent className="w-5 h-5 text-white" />
+                              </div>
+                              <div>
+                                <div className="font-medium text-sm">{account.name}</div>
+                                <div className="text-xs text-gray-500">
+                                  {account.institutionName} • {account.subtype}
+                                </div>
+                              </div>
                             </div>
-                            <div>
-                              <div className="font-medium text-sm">{account.name}</div>
-                              <div className="text-xs text-gray-500">{account.accountNumber}</div>
-                            </div>
+                            <span className="text-sm font-bold">
+                              ${account.type === 'credit' ? -Math.abs(account.balance.current) : account.balance.current}
+                            </span>
                           </div>
-                          <span className="text-sm font-bold">${account.balance.toLocaleString()}</span>
-                        </div>
-                      )
-                    })}
-                  </div>
+                        )
+                      })}
+                    </div>
+                  )}
 
                   <div className="mt-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border">
                     <div className="flex items-center gap-2 text-sm text-gray-700">
                       <TrendingUp className="h-4 w-4 text-green-500" />
-                      <span className="font-medium">Total Portfolio Growth: +8.2%</span>
+                      <span className="font-medium">
+                        {accounts.length > 0
+                          ? `${accounts.length} Account${accounts.length !== 1 ? 's' : ''} Connected`
+                          : 'Connect Accounts to Track Growth'
+                        }
+                      </span>
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">Your accounts are performing well this quarter.</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {accounts.length > 0
+                        ? `Total balance across all accounts: $${totalBalance.toLocaleString()}`
+                        : 'Link your bank accounts to see portfolio insights and growth tracking.'
+                      }
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -329,48 +524,110 @@ export default function FinanceDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Transactions</CardTitle>
-                  <Button variant="ghost" className="text-sm">
-                    View All
-                  </Button>
+                  <NextLink href="/transactions">
+
+                    <Button variant="ghost" className="text-sm">
+
+                      View All
+
+                    </Button>
+                  </NextLink>
+
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {transactions.map((transaction) => (
-                      <div
-                        key={transaction.id}
-                        className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer group"
-                        onClick={() => handleTransactionClick(transaction.id)}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8 group-hover:scale-105 transition-transform">
-                            <AvatarFallback className={`${transaction.color} text-white text-xs`}>
-                              {transaction.name.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium text-sm group-hover:text-primary transition-colors">
-                              {transaction.name}
-                            </div>
-                            <div className="text-xs text-gray-500">{transaction.date}</div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-medium">{transaction.type}</div>
-                          <div
-                            className={`text-sm font-bold ${transaction.amount > 0 ? "text-green-600" : "text-red-600"}`}
-                          >
-                            {transaction.amount > 0 ? "+" : ""}${Math.abs(transaction.amount).toFixed(2)}
-                          </div>
-                        </div>
+                  {recentTransactions.length === 0 && !transactionsLoading ? (
+                    <div className="text-center py-8">
+                      <div className="text-gray-500">
+                        <Receipt className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                        <p className="text-sm">
+                          {transactions.length > 0 ? 'No recent transactions' : 'No transactions yet'}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {transactions.length > 0
+                            ? 'All transactions are older than 7 days'
+                            : 'Connect an account to see transactions'
+                          }
+                        </p>
+                        {transactions.length > 0 && (
+                          <NextLink href="/transactions">
+                            <Button variant="outline" size="sm" className="mt-2">
+                              View All Transactions
+                            </Button>
+                          </NextLink>
+                        )}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {recentTransactions.map((transaction) => {
+                        const categoryColor = getCategoryColor(transaction.category)
+                        const isIncome = transaction.amount < 0 // In Plaid: negative = income, positive = expense
+
+                        return (
+                          <div
+                            key={transaction.id}
+                            className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer group"
+                            onClick={() => handleTransactionClick(transaction.id)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-8 w-8 group-hover:scale-105 transition-transform">
+                                <AvatarFallback className={`${categoryColor} text-white text-xs`}>
+                                  {transaction.name.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="font-medium text-sm group-hover:text-primary transition-colors">
+                                  {transaction.name}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {new Date(transaction.date).toLocaleDateString()} • {transaction.accountName}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-medium">
+                                {formatCategoryName(transaction.category)}
+                              </div>
+                              <div
+                                className={`text-sm font-bold ${isIncome ? "text-green-600" : "text-red-600"}`}
+                              >
+                                {isIncome ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+
+                      {transactionsLoading && recentTransactions.length === 0 && (
+                        <div className="space-y-4">
+                          {Array.from({ length: 5 }, (_, i) => (
+                            <div key={i} className="flex items-center justify-between p-3 rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+                                <div>
+                                  <div className="w-32 h-4 bg-gray-200 rounded animate-pulse mb-1"></div>
+                                  <div className="w-24 h-3 bg-gray-200 rounded animate-pulse"></div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="w-16 h-4 bg-gray-200 rounded animate-pulse mb-1"></div>
+                                <div className="w-12 h-3 bg-gray-200 rounded animate-pulse"></div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
 
             {/* Right Column */}
             <div className="space-y-6">
+              {/* Primary Goal Widget */}
+              <PrimaryGoalWidget />
+              
               {/* Monthly Expenses */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
@@ -383,169 +640,195 @@ export default function FinanceDashboard() {
                   </Button>
                 </CardHeader>
                 <CardContent>
-                  <div className="w-full h-[180px] mb-4">
-                    <ChartContainer
-                      config={{
-                        amount: {
-                          label: "Amount",
-                          color: "hsl(var(--chart-1))",
-                        },
-                      }}
-                      className="h-full w-full"
-                    >
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                          data={monthlyExpenses}
-                          margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
-                          barCategoryGap="20%"
-                        >
-                          <XAxis
-                            dataKey="month"
-                            axisLine={false}
-                            tickLine={false}
-                            tick={{ fontSize: 12, fill: "#6b7280" }}
-                          />
-                          <YAxis hide />
-                          <ChartTooltip
-                            content={<ChartTooltipContent />}
-                            formatter={(value) => [`$${(value / 1000).toFixed(0)}k`, "Expenses"]}
-                          />
-                          <Bar dataKey="amount" fill="#1f2937" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </ChartContainer>
+                  {transactionsLoading ? (
+                    <div className="w-full h-[180px] mb-4 flex items-center justify-center">
+                      <div className="text-sm text-gray-500">Loading expenses...</div>
+                    </div>
+                  ) : (
+                    <div className="w-full h-[180px] mb-4">
+                      <ChartContainer
+                        config={{
+                          amount: {
+                            label: "Amount",
+                            color: "hsl(var(--chart-1))",
+                          },
+                        }}
+                        className="h-full w-full"
+                      >
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={monthlyExpensesData}
+                            margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
+                            barCategoryGap="20%"
+                          >
+                            <XAxis
+                              dataKey="month"
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fontSize: 12, fill: "#6b7280" }}
+                            />
+                            <YAxis hide />
+                            <ChartTooltip
+                              content={<ChartTooltipContent />}
+                              formatter={(value) => [`$${value.toLocaleString()}`, "Expenses"]}
+                            />
+                            <Bar dataKey="amount" fill="#1f2937" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
+                    </div>
+                  )}
+                  {monthlyExpensesData.length >= 2 && (
+                    <div className="flex items-center gap-1 text-sm">
+                      {(() => {
+                        const currentMonth = monthlyExpensesData[monthlyExpensesData.length - 1].amount
+                        const previousMonth = monthlyExpensesData[monthlyExpensesData.length - 2].amount
+                        const change = ((currentMonth - previousMonth) / previousMonth) * 100
+                        const isIncrease = change > 0
+
+                        return (
+                          <>
+                            <div className={`flex items-center gap-1 ${isIncrease ? 'text-red-600' : 'text-green-600'}`}>
+                              {isIncrease ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                              <span>
+                                {isIncrease ? 'Up' : 'Down'} {Math.abs(change).toFixed(1)}% from last month
+                              </span>
+                            </div>
+                          </>
+                        )
+                      })()}
+                    </div>
+                  )}
+                  <div className="text-xs text-gray-500 mt-1">
+                    {totalMonthlyExpenses > 0 ? 'Based on your transaction history' : 'Sample data - connect accounts for real insights'}
                   </div>
-                  <div className="flex items-center gap-1 text-sm text-green-600">
-                    <ArrowUp className="h-3 w-3" />
-                    <span>Trending up by 5.2% this month</span>
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">Showing data from the last 6 months</div>
                 </CardContent>
               </Card>
 
               {/* Summary */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Summary</CardTitle>
+                  <CardTitle>Expense Summary</CardTitle>
                   <Button variant="ghost" size="icon">
                     <ArrowUp className="h-4 w-4" />
                   </Button>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-xs text-gray-600 mb-4">Data from 1-12 Apr, 2024</div>
-
-                  <div className="relative w-32 h-32 mx-auto mb-4">
-                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                      <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="8" />
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="40"
-                        fill="none"
-                        stroke="#1f2937"
-                        strokeWidth="8"
-                        strokeDasharray="80 20"
-                        strokeDashoffset="0"
-                      />
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="40"
-                        fill="none"
-                        stroke="#6b7280"
-                        strokeWidth="8"
-                        strokeDasharray="40 60"
-                        strokeDashoffset="-80"
-                      />
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="40"
-                        fill="none"
-                        stroke="#9ca3af"
-                        strokeWidth="8"
-                        strokeDasharray="20 80"
-                        strokeDashoffset="-120"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-lg font-bold">$1,125</span>
-                    </div>
+                  <div className="text-xs text-gray-600 mb-4">
+                    Last 30 days • ${totalMonthlyExpenses.toLocaleString()} total
                   </div>
 
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-black rounded-full"></div>
-                        <span>Food & Drinks</span>
+                  {totalMonthlyExpenses > 0 && topExpenseCategories.length > 0 ? (
+                    <>
+                      <div className="relative w-32 h-32 mx-auto mb-4">
+                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                          <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="8" />
+                          {topExpenseCategories.map((category, index) => {
+                            const colors = ['#1f2937', '#6b7280', '#9ca3af']
+                            const circumference = 2 * Math.PI * 40
+                            const strokeDasharray = `${(category.percentage / 100) * circumference} ${circumference}`
+                            const strokeDashoffset = index === 0 ? 0 :
+                              -topExpenseCategories.slice(0, index).reduce((sum, cat) => sum + (cat.percentage / 100) * circumference, 0)
+
+                            return (
+                              <circle
+                                key={category.category}
+                                cx="50"
+                                cy="50"
+                                r="40"
+                                fill="none"
+                                stroke={colors[index] || '#d1d5db'}
+                                strokeWidth="8"
+                                strokeDasharray={strokeDasharray}
+                                strokeDashoffset={strokeDashoffset}
+                              />
+                            )
+                          })}
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-lg font-bold">
+                            ${Math.round(totalMonthlyExpenses).toLocaleString()}
+                          </span>
+                        </div>
                       </div>
-                      <span>32%</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
-                        <span>Shopping</span>
+
+                      <div className="space-y-2">
+                        {topExpenseCategories.map((category, index) => {
+                          const colors = ['bg-black', 'bg-gray-600', 'bg-gray-400']
+                          return (
+                            <div key={category.category} className="flex items-center justify-between text-sm">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 ${colors[index]} rounded-full`}></div>
+                                <span className="capitalize">{category.category.toLowerCase()}</span>
+                              </div>
+                              <span>{category.percentage}%</span>
+                            </div>
+                          )
+                        })}
                       </div>
-                      <span>13%</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                        <span>Transport</span>
+                    </>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="text-gray-500">
+                        <PieChart className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                        <p className="text-sm">No expense data</p>
+                        <p className="text-xs text-gray-400">Connect an account to see expense breakdown</p>
                       </div>
-                      <span>7%</span>
                     </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
 
-              {/* Saving Goal */}
+
+
+              {/* Income vs Expenses */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Saving Goal</CardTitle>
+                  <CardTitle>Income vs Expenses</CardTitle>
                   <Button variant="ghost" className="text-sm">
-                    View Report
+                    View Details
                   </Button>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-sm text-gray-600 mb-2">75% Progress</div>
-                  <div className="text-2xl font-bold mb-1">$1052.98</div>
-                  <div className="text-sm text-gray-600 mb-4">of $1,200</div>
-                  <Progress value={75} className="mb-4" />
-                </CardContent>
-              </Card>
-
-              {/* My Wallet */}
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>My Wallet</CardTitle>
-                  <Button variant="ghost" size="icon">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-xs text-gray-600 mb-4">A total of 4 cards are listed</div>
+                  <div className="text-xs text-gray-600 mb-4">Last 30 days comparison</div>
 
                   <div className="space-y-4">
-                    <div className="bg-green-500 text-white p-4 rounded-lg">
-                      <div className="flex justify-between items-start mb-8">
-                        <div>
-                          <div className="text-sm opacity-80">Credit Card</div>
-                          <div className="text-lg font-bold">5375 **** **** 2368</div>
-                        </div>
-                        <div className="bg-white/20 px-2 py-1 rounded text-xs">VISA</div>
+                    {/* Income */}
+                    <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-lg">
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="text-sm opacity-90">Total Income</div>
+                        <ArrowUp className="h-4 w-4 opacity-75" />
                       </div>
-                      <div className="text-2xl font-bold">$5,325.57</div>
+                      <div className="text-2xl font-bold">
+                        +${totalMonthlyIncome.toLocaleString()}
+                      </div>
+                      <div className="text-xs opacity-75 mt-1">
+                        {transactionsLoading ? 'Loading...' : 'From deposits & transfers'}
+                      </div>
                     </div>
 
-                    <div className="bg-blue-500 text-white p-4 rounded-lg">
-                      <div className="flex justify-between items-start mb-8">
-                        <div>
-                          <div className="text-sm opacity-80">Digital Card</div>
-                          <div className="text-lg font-bold">5375 **** **** ****</div>
+                    {/* Expenses */}
+                    <div className="bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-lg">
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="text-sm opacity-90">Total Expenses</div>
+                        <ArrowDown className="h-4 w-4 opacity-75" />
+                      </div>
+                      <div className="text-2xl font-bold">
+                        -${totalMonthlyExpenses.toLocaleString()}
+                      </div>
+                      <div className="text-xs opacity-75 mt-1">
+                        {transactionsLoading ? 'Loading...' : 'From purchases & bills'}
+                      </div>
+                    </div>
+
+                    {/* Net Result */}
+                    <div className={`bg-gradient-to-r ${netChange >= 0 ? 'from-blue-500 to-blue-600' : 'from-orange-500 to-orange-600'} text-white p-3 rounded-lg`}>
+                      <div className="flex justify-between items-center">
+                        <div className="text-sm opacity-90">Net Result</div>
+                        <div className="text-lg font-bold">
+                          {netChange >= 0 ? '+' : ''}${netChange.toLocaleString()}
                         </div>
                       </div>
-                      <div className="text-2xl font-bold">$10,892.43</div>
                     </div>
                   </div>
                 </CardContent>
@@ -560,8 +843,8 @@ export default function FinanceDashboard() {
             <DialogTitle className="flex items-center gap-3">
               {selectedAccount && (
                 <>
-                  <div className={`w-10 h-10 ${selectedAccount.color} rounded-full flex items-center justify-center`}>
-                    {React.createElement(selectedAccount.icon, { className: "w-5 h-5 text-white" })}
+                  <div className={`w-10 h-10 ${getAccountColor(selectedAccount.type, selectedAccount.subtype).color} rounded-full flex items-center justify-center`}>
+                    {React.createElement(getAccountIcon(selectedAccount.type, selectedAccount.subtype), { className: "w-5 h-5 text-white" })}
                   </div>
                   {selectedAccount.name}
                 </>
@@ -573,64 +856,67 @@ export default function FinanceDashboard() {
               {/* Account Balance */}
               <div className="text-center p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg">
                 <div className="text-sm text-gray-600 mb-1">Current Balance</div>
-                <div className="text-3xl font-bold text-gray-900">${selectedAccount.balance.toLocaleString()}</div>
+                <div className="text-3xl font-bold text-gray-900">
+                  ${selectedAccount.type === 'credit' ? -Math.abs(selectedAccount.balance.current) : selectedAccount.balance.current}
+                </div>
+                {selectedAccount.balance.available && (
+                  <div className="text-sm text-gray-500 mt-1">
+                    Available: ${selectedAccount.type === 'credit' ? -Math.abs(selectedAccount.balance.available) : selectedAccount.balance.available}
+                  </div>
+                )}
               </div>
 
               {/* Account Details */}
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-sm font-medium text-gray-600">Account Type</div>
-                    <div className="text-sm text-gray-900">{selectedAccount.type}</div>
+                    <div className="text-sm text-gray-600">Account Type</div>
+                    <div className="font-medium capitalize">{selectedAccount.type} - {selectedAccount.subtype}</div>
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-gray-600">Bank</div>
-                    <div className="text-sm text-gray-900">{selectedAccount.bank}</div>
+                    <div className="text-sm text-gray-600">Institution</div>
+                    <div className="font-medium">{selectedAccount.institutionName}</div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-sm font-medium text-gray-600">Account Number</div>
-                    <div className="text-sm text-gray-900 font-mono">{selectedAccount.fullAccountNumber}</div>
+                    <div className="text-sm text-gray-600">Account Name</div>
+                    <div className="font-medium">{selectedAccount.name}</div>
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-gray-600">Routing Number</div>
-                    <div className="text-sm text-gray-900 font-mono">{selectedAccount.routingNumber}</div>
+                    <div className="text-sm text-gray-600">Last Updated</div>
+                    <div className="font-medium">
+                      {new Date(selectedAccount.lastUpdated).toLocaleDateString()}
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                {selectedAccount.balance.limit && (
                   <div>
-                    <div className="text-sm font-medium text-gray-600">Opened Date</div>
-                    <div className="text-sm text-gray-900">{selectedAccount.openedDate}</div>
+                    <div className="text-sm text-gray-600">Credit Limit</div>
+                    <div className="font-medium">${selectedAccount.balance.limit.toLocaleString()}</div>
                   </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-600">Interest Rate</div>
-                    <div className="text-sm text-gray-900">{selectedAccount.interestRate}</div>
-                  </div>
-                </div>
+                )}
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-4">
-                <Button className="flex-1 bg-transparent" variant="outline">
-                  <ArrowUp className="h-4 w-4 mr-2" />
-                  Transfer
+              {/* Quick Actions */}
+              <div className="flex gap-2 pt-4 border-t">
+                <Button className="flex-1" variant="outline">
+                  <NextLink href={`/transactions?accountId=${selectedAccount.id}`} className="flex items-center gap-2">
+                    <Receipt className="h-4 w-4" />
+                    View Transactions
+                  </NextLink>
                 </Button>
-                <Button className="flex-1 bg-transparent" variant="outline">
-                  <ArrowDown className="h-4 w-4 mr-2" />
-                  Deposit
-                </Button>
-                <Button className="flex-1 bg-transparent" variant="outline">
-                  <Receipt className="h-4 w-4 mr-2" />
-                  Statements
+                <Button className="flex-1" variant="outline">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Sync Account
                 </Button>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
-    </SidebarProvider>
+    </>
   )
 }

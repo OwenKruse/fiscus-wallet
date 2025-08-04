@@ -22,13 +22,25 @@ import {
     Wallet,
     User,
     ChevronUp,
+    ChartArea,
+    LogOut,
   } from "lucide-react"
   import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
   import { usePathname } from "next/navigation"
   import Link from "next/link"
+  import { useAuthContext } from "./auth-provider"
   
 export function AppSidebar() {
     const pathname = usePathname()
+    const { user, signOut } = useAuthContext()
+    
+    const handleSignOut = async () => {
+      try {
+        await signOut()
+      } catch (error) {
+        console.error('Sign out error:', error)
+      }
+    }
     
     const menuItems = [
       {
@@ -47,24 +59,9 @@ export function AppSidebar() {
         url: "/transactions",
       },
       {
-        title: "Cards",
-        icon: CreditCard,
-        url: "#",
-      },
-      {
-        title: "Wallet",
-        icon: Wallet,
-        url: "#",
-      },
-      {
         title: "Goals",
         icon: Target,
-        url: "#",
-      },
-      {
-        title: "Reports",
-        icon: PieChart,
-        url: "#",
+        url: "/goals",
       },
     ]
   
@@ -136,7 +133,7 @@ export function AppSidebar() {
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton>
                     <User className="size-4" />
-                    <span>John Doe</span>
+                    <span>{user?.firstName ? `${user.firstName} ${user.lastName || ''}` : user?.email || 'User'}</span>
                     <ChevronUp className="ml-auto size-4" />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
@@ -147,7 +144,8 @@ export function AppSidebar() {
                   <DropdownMenuItem>
                     <span>Billing</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="size-4 mr-2" />
                     <span>Sign out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>

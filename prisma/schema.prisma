@@ -1,0 +1,177 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = "postgres://0198622a-5dad-7b67-9346-4f60e700af42:5896feaa-30b1-4d9a-8562-80ee60a0e327@us-west-2.db.thenile.dev/fiscus_wallet"
+  schemas  = ["public", "users"]
+}
+
+model PlaidConnection {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  itemId          String    @map("item_id") @db.VarChar(255)
+  accessToken     String    @map("access_token")
+  institutionId   String    @map("institution_id") @db.VarChar(255)
+  institutionName String    @map("institution_name") @db.VarChar(255)
+  accounts        String[]  @default([])
+  status          String    @default("active") @db.VarChar(50)
+  lastSync        DateTime? @map("last_sync") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  userAccounts    Account[]
+
+  @@unique([userId, itemId], name: "unique_user_item")
+  @@index([userId])
+  @@index([status])
+  @@index([lastSync])
+  @@map("plaid_connections")
+  @@schema("public")
+}
+
+model Account {
+  id               String          @id @default(uuid()) @db.Uuid
+  userId           String          @map("user_id") @db.Uuid
+  plaidAccountId   String          @map("plaid_account_id") @db.VarChar(255)
+  connectionId     String          @map("connection_id") @db.Uuid
+  name             String          @db.VarChar(255)
+  officialName     String?         @map("official_name") @db.VarChar(255)
+  type             String          @db.VarChar(50)
+  subtype          String          @db.VarChar(50)
+  balanceAvailable Decimal?        @map("balance_available") @db.Decimal(12, 2)
+  balanceCurrent   Decimal         @map("balance_current") @db.Decimal(12, 2)
+  balanceLimit     Decimal?        @map("balance_limit") @db.Decimal(12, 2)
+  lastUpdated      DateTime        @default(now()) @map("last_updated") @db.Timestamptz(6)
+  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  connection       PlaidConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  transactions     Transaction[]
+
+  @@unique([userId, plaidAccountId], name: "unique_user_plaid_account")
+  @@index([userId])
+  @@index([connectionId])
+  @@index([type])
+  @@index([lastUpdated])
+  @@map("accounts")
+  @@schema("public")
+}
+
+model Transaction {
+  id                 String   @id @default(uuid()) @db.Uuid
+  userId             String   @map("user_id") @db.Uuid
+  accountId          String   @map("account_id") @db.Uuid
+  plaidTransactionId String   @map("plaid_transaction_id") @db.VarChar(255)
+  amount             Decimal  @db.Decimal(12, 2)
+  date               DateTime @db.Date
+  name               String   @db.VarChar(255)
+  merchantName       String?  @map("merchant_name") @db.VarChar(255)
+  category           String[] @default([])
+  subcategory        String?  @db.VarChar(255)
+  pending            Boolean  @default(false)
+  accountOwner       String?  @map("account_owner") @db.VarChar(255)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  account            Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, plaidTransactionId], name: "unique_user_plaid_transaction")
+  @@index([userId])
+  @@index([accountId])
+  @@index([userId, date(sort: Desc)], map: "idx_transactions_user_date")
+  @@index([date(sort: Desc)])
+  @@index([pending])
+  @@index([category])
+  @@map("transactions")
+  @@schema("public")
+}
+
+/// This table has subclasses and requires additional setup for migrations. Visit https://pris.ly/d/table-inheritance for more info.
+model tenants {
+  id         String    @id @default(dbgenerated("public.uuid_generate_v7()")) @db.Uuid
+  name       String?
+  created    DateTime  @default(dbgenerated("LOCALTIMESTAMP")) @db.Timestamp(6)
+  updated    DateTime  @default(dbgenerated("LOCALTIMESTAMP")) @db.Timestamp(6)
+  deleted    DateTime? @db.Timestamp(6)
+  compute_id String?   @db.Uuid
+
+  @@schema("public")
+}
+
+/// This table has subclasses and requires additional setup for migrations. Visit https://pris.ly/d/table-inheritance for more info.
+model tenant_users {
+  tenant_id String    @db.Uuid
+  user_id   String    @db.Uuid
+  created   DateTime  @default(dbgenerated("LOCALTIMESTAMP")) @db.Timestamp(6)
+  updated   DateTime  @default(dbgenerated("LOCALTIMESTAMP")) @db.Timestamp(6)
+  deleted   DateTime? @db.Timestamp(6)
+  roles     String[]
+  email     String?
+
+  @@id([tenant_id, user_id])
+  @@schema("users")
+}
+
+model users {
+  id             String    @id @default(dbgenerated("public.uuid_generate_v7()")) @db.Uuid
+  created        DateTime  @default(dbgenerated("LOCALTIMESTAMP")) @db.Timestamp(6)
+  updated        DateTime  @default(dbgenerated("LOCALTIMESTAMP")) @db.Timestamp(6)
+  deleted        DateTime? @db.Timestamp(6)
+  name           String?
+  family_name    String?
+  given_name     String?
+  email          String?
+  picture        String?
+  email_verified DateTime? @db.Timestamp(6)
+  password_hash  String?
+
+  @@schema("users")
+}
+
+model Goal {
+  id                  String        @id @default(dbgenerated("public.uuid_generate_v7()")) @db.Uuid
+  userId              String        @map("user_id") @db.Uuid
+  title               String        @db.VarChar(255)
+  description         String?
+  goalType            String        @map("goal_type") @db.VarChar(50)
+  category            String?       @db.VarChar(100)
+  targetAmount        Decimal       @map("target_amount") @db.Decimal(12, 2)
+  currentAmount       Decimal       @default(0) @map("current_amount") @db.Decimal(12, 2)
+  targetDate          DateTime      @map("target_date") @db.Date
+  status              String        @default("active") @db.VarChar(20)
+  priority            String        @default("medium") @db.VarChar(10)
+  isPrimary           Boolean       @default(false) @map("is_primary")
+  trackingAccountIds  String[]      @default([]) @map("tracking_account_ids") @db.Uuid
+  trackingMethod      String        @default("manual") @map("tracking_method") @db.VarChar(50)
+  trackingConfig      Json?         @map("tracking_config")
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  goalProgress        GoalProgress[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([isPrimary])
+  @@index([targetDate])
+  @@index([goalType])
+  @@map("goals")
+  @@schema("public")
+}
+
+model GoalProgress {
+  id             String   @id @default(dbgenerated("public.uuid_generate_v7()")) @db.Uuid
+  goalId         String   @map("goal_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  amount         Decimal  @db.Decimal(12, 2)
+  progressType   String   @map("progress_type") @db.VarChar(20)
+  description    String?
+  transactionId  String?  @map("transaction_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  goal           Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([progressType])
+  @@map("goal_progress")
+  @@schema("public")
+}

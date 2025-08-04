@@ -1,11 +1,47 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
+
+// Cookie utilities
+const COOKIE_NAME = 'finance_date_range'
+
+const setCookie = (name: string, value: string, days: number = 365) => {
+  const expires = new Date()
+  expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000)
+  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`
+}
+
+const getCookie = (name: string): string | null => {
+  try {
+    const nameEQ = name + "="
+    const ca = document.cookie.split(';')
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i]
+      while (c.charAt(0) === ' ') c = c.substring(1, c.length)
+      if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length)
+    }
+    return null
+  } catch (error) {
+    console.error('Error reading cookie:', error)
+    return null
+  }
+}
+
+// Generate default one year range
+const getDefaultDateRange = (): string => {
+  const today = new Date()
+  const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate())
+  
+  const formatDate = (date: Date) => 
+    date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  
+  return `${formatDate(oneYearAgo)} - ${formatDate(today)}`
+}
 
 const dateRangeOptions = [
   "Today",
@@ -42,12 +78,74 @@ interface CalendarComponentProps {
 }
 
 export default function CalendarComponent({ dateRange, onDateRangeChange }: CalendarComponentProps) {
-  const [selectedRange, setSelectedRange] = useState("Last 28 Days")
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 6, 30)) // July 30, 2025
+  const [selectedRange, setSelectedRange] = useState("This Year")
+  const [currentDate, setCurrentDate] = useState(new Date())
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [endDate, setEndDate] = useState<Date | null>(null)
   const [hoverDate, setHoverDate] = useState<Date | null>(null)
   const [open, setOpen] = useState(false)
+  const [isInitialized, setIsInitialized] = useState(false)
+
+  // Initialize with saved cookie or default to one year
+  useEffect(() => {
+    if (isInitialized) return
+    
+    const savedDateRange = getCookie(COOKIE_NAME)
+    const initialDateRange = savedDateRange || getDefaultDateRange()
+    
+    // If no dateRange prop provided or it's the old default, use the saved/default range
+    if (!dateRange || dateRange === "" || dateRange === "03 Jul 2025 - 30 Jul 2025") {
+      onDateRangeChange(initialDateRange)
+    }
+    
+    setIsInitialized(true)
+  }, [dateRange, onDateRangeChange, isInitialized])
+
+  // Initialize selected range based on dateRange prop
+  useEffect(() => {
+    if (!isInitialized || !dateRange) return
+    
+    // Try to match the dateRange to a preset option
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    
+    const todayStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    const yesterdayStr = yesterday.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    
+    if (dateRange === todayStr) {
+      setSelectedRange("Today")
+    } else if (dateRange === yesterdayStr) {
+      setSelectedRange("Yesterday")
+    } else if (dateRange.includes(' - ')) {
+      // Check if it matches any of the preset ranges
+      const [startStr, endStr] = dateRange.split(' - ')
+      const start = new Date(startStr)
+      const end = new Date(endStr)
+      
+      // Calculate the difference in days
+      const diffTime = Math.abs(end.getTime() - start.getTime())
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      
+      if (diffDays <= 1) {
+        setSelectedRange("Today")
+      } else if (diffDays === 6 || diffDays === 7) {
+        setSelectedRange("This Week")
+      } else if (diffDays === 7) {
+        setSelectedRange("Last 7 Days")
+      } else if (diffDays === 28) {
+        setSelectedRange("Last 28 Days")
+      } else if (diffDays >= 360 && diffDays <= 370) {
+        setSelectedRange("This Year")
+      } else {
+        setSelectedRange("Custom Range")
+        setStartDate(start)
+        setEndDate(end)
+      }
+    } else {
+      setSelectedRange("Custom Range")
+    }
+  }, [dateRange, isInitialized])
 
   const getDaysInMonth = (date: Date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
@@ -130,13 +228,15 @@ export default function CalendarComponent({ dateRange, onDateRangeChange }: Cale
         newDateRange = `${lastMonthStart.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} - ${lastMonthEnd.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`
         break
       case "This Year":
-        const startOfYear = new Date(today.getFullYear(), 0, 1)
-        const endOfYear = new Date(today.getFullYear(), 11, 31)
-        newDateRange = `${startOfYear.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} - ${endOfYear.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`
+        const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate())
+        newDateRange = `${oneYearAgo.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} - ${today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`
         break
       default:
-        newDateRange = "03 Jul 2025 - 30 Jul 2025"
+        newDateRange = getDefaultDateRange()
     }
+    
+    // Save to cookie
+    setCookie(COOKIE_NAME, newDateRange)
     
     onDateRangeChange(newDateRange)
     setOpen(false)
@@ -323,7 +423,10 @@ export default function CalendarComponent({ dateRange, onDateRangeChange }: Cale
                       <Button 
                         size="sm" 
                         onClick={() => {
-                          onDateRangeChange(formatDateRange(startDate, endDate))
+                          const customRange = formatDateRange(startDate, endDate)
+                          // Save custom range to cookie
+                          setCookie(COOKIE_NAME, customRange)
+                          onDateRangeChange(customRange)
                           setOpen(false)
                         }}
                         className="bg-black text-white hover:bg-gray-800"
