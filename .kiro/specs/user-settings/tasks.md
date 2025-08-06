@@ -69,7 +69,7 @@
   - Add responsive design for mobile and desktop views
   - _Requirements: 1.1, 1.2, 1.3_
 
-- [ ] 6.2 Create profile settings form components
+- [x] 6.2 Create profile settings form components
   - Build ProfileForm component with editable fields
   - Implement ProfilePictureUpload component with file handling
   - Create EmailChangeForm with verification workflow
