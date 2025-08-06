@@ -655,3 +655,355 @@ export interface GoalNotification {
   read: boolean;
   createdAt: string;
 }
+
+// User Settings Types
+export interface UserSettings {
+  id: string;
+  userId: string;
+  profile: ProfileSettings;
+  notifications: NotificationSettings;
+  display: DisplaySettings;
+  privacy: PrivacySettings;
+  accounts: AccountSettings;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProfileSettings {
+  firstName?: string;
+  lastName?: string;
+  email: string;
+  phone?: string;
+  profilePictureUrl?: string;
+  emailVerified: boolean;
+}
+
+export interface NotificationSettings {
+  enabled: boolean;
+  email: boolean;
+  goalProgress: boolean;
+  accountAlerts: boolean;
+  systemUpdates: boolean;
+  marketingEmails: boolean;
+}
+
+export interface DisplaySettings {
+  theme: 'light' | 'dark' | 'system';
+  currency: string;
+  dateFormat: string;
+  timezone: string;
+  language: string;
+}
+
+export interface PrivacySettings {
+  twoFactorEnabled: boolean;
+  dataSharingAnalytics: boolean;
+  dataSharingMarketing: boolean;
+  sessionTimeoutMinutes: number;
+}
+
+export interface AccountSettings {
+  autoSyncEnabled: boolean;
+  syncFrequency: 'realtime' | 'hourly' | 'daily';
+}
+
+// Individual Setting Item Type
+export interface UserSetting {
+  id: string;
+  userId: string;
+  category: string;
+  key: string;
+  value: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// User Preferences Type (matches Prisma model)
+export interface UserPreferences {
+  id: string;
+  userId: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  profilePictureUrl?: string;
+  theme: 'light' | 'dark' | 'system';
+  currencyFormat: string;
+  dateFormat: string;
+  timezone: string;
+  language: string;
+  notificationsEnabled: boolean;
+  emailNotifications: boolean;
+  goalNotifications: boolean;
+  accountAlerts: boolean;
+  systemUpdates: boolean;
+  marketingEmails: boolean;
+  dataSharingAnalytics: boolean;
+  dataSharingMarketing: boolean;
+  twoFactorEnabled: boolean;
+  sessionTimeoutMinutes: number;
+  autoSyncEnabled: boolean;
+  syncFrequency: 'realtime' | 'hourly' | 'daily';
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Settings API Request Types
+export interface UpdateProfileSettingsRequest {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  profilePictureUrl?: string;
+}
+
+export interface UpdateNotificationSettingsRequest {
+  notificationsEnabled?: boolean;
+  emailNotifications?: boolean;
+  goalNotifications?: boolean;
+  accountAlerts?: boolean;
+  systemUpdates?: boolean;
+  marketingEmails?: boolean;
+}
+
+export interface UpdateDisplaySettingsRequest {
+  theme?: 'light' | 'dark' | 'system';
+  currencyFormat?: string;
+  dateFormat?: string;
+  timezone?: string;
+  language?: string;
+}
+
+export interface UpdatePrivacySettingsRequest {
+  twoFactorEnabled?: boolean;
+  dataSharingAnalytics?: boolean;
+  dataSharingMarketing?: boolean;
+  sessionTimeoutMinutes?: number;
+}
+
+export interface UpdateAccountSettingsRequest {
+  autoSyncEnabled?: boolean;
+  syncFrequency?: 'realtime' | 'hourly' | 'daily';
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface ChangeEmailRequest {
+  newEmail: string;
+  password: string;
+}
+
+// Settings API Response Types
+export interface SettingsResponse<T = any> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
+export interface UserSettingsResponse {
+  profile: ProfileSettings;
+  notifications: NotificationSettings;
+  display: DisplaySettings;
+  privacy: PrivacySettings;
+  accounts: AccountSettings;
+}
+
+export interface ResetSettingsRequest {
+  category?: 'profile' | 'notifications' | 'display' | 'privacy' | 'accounts';
+}
+
+export interface ExportUserDataResponse {
+  profile: ProfileSettings;
+  preferences: UserPreferences;
+  settings: UserSetting[];
+  goals: Goal[];
+  accounts: AccountsResponse['accounts'];
+  transactions: TransactionsResponse['transactions'];
+  exportedAt: string;
+}
+
+// Settings Context Types
+export interface SettingsContextType {
+  settings: UserSettings | null;
+  preferences: UserPreferences | null;
+  isLoading: boolean;
+  error: string | null;
+  updateProfile: (data: UpdateProfileSettingsRequest) => Promise<void>;
+  updateNotifications: (data: UpdateNotificationSettingsRequest) => Promise<void>;
+  updateDisplay: (data: UpdateDisplaySettingsRequest) => Promise<void>;
+  updatePrivacy: (data: UpdatePrivacySettingsRequest) => Promise<void>;
+  updateAccounts: (data: UpdateAccountSettingsRequest) => Promise<void>;
+  changePassword: (data: ChangePasswordRequest) => Promise<void>;
+  changeEmail: (data: ChangeEmailRequest) => Promise<void>;
+  resetSettings: (category?: string) => Promise<void>;
+  exportData: () => Promise<ExportUserDataResponse>;
+  refreshSettings: () => Promise<void>;
+}
+
+// Settings Component Props Types
+export interface SettingsPageProps {
+  initialTab?: 'profile' | 'notifications' | 'display' | 'privacy' | 'accounts';
+}
+
+export interface ProfileFormProps {
+  profile: ProfileSettings;
+  onSubmit: (data: UpdateProfileSettingsRequest) => Promise<void>;
+  loading?: boolean;
+  error?: string;
+}
+
+export interface NotificationFormProps {
+  notifications: NotificationSettings;
+  onSubmit: (data: UpdateNotificationSettingsRequest) => Promise<void>;
+  loading?: boolean;
+  error?: string;
+}
+
+export interface DisplayFormProps {
+  display: DisplaySettings;
+  onSubmit: (data: UpdateDisplaySettingsRequest) => Promise<void>;
+  loading?: boolean;
+  error?: string;
+}
+
+export interface PrivacyFormProps {
+  privacy: PrivacySettings;
+  onSubmit: (data: UpdatePrivacySettingsRequest) => Promise<void>;
+  onChangePassword: (data: ChangePasswordRequest) => Promise<void>;
+  loading?: boolean;
+  error?: string;
+}
+
+export interface AccountsFormProps {
+  accounts: AccountSettings;
+  connectedAccounts: AccountsResponse['accounts'];
+  onSubmit: (data: UpdateAccountSettingsRequest) => Promise<void>;
+  onDisconnectAccount: (accountId: string) => Promise<void>;
+  loading?: boolean;
+  error?: string;
+}
+
+// Settings Validation Types
+export interface SettingsValidationError {
+  field: string;
+  message: string;
+  code: string;
+}
+
+export interface SettingsValidationResult {
+  isValid: boolean;
+  errors: SettingsValidationError[];
+}
+
+// Settings Event Types
+export interface SettingsEvent extends AppEvent {
+  type: 'settings.profile.updated' | 'settings.notifications.updated' | 'settings.display.updated' | 'settings.privacy.updated' | 'settings.accounts.updated' | 'settings.password.changed' | 'settings.email.changed' | 'settings.reset' | 'settings.exported';
+  payload: {
+    userId: string;
+    category: string;
+    changes?: Record<string, any>;
+    oldValues?: Record<string, any>;
+    newValues?: Record<string, any>;
+  };
+}
+
+// Settings Audit Types
+export interface UserSettingsAudit {
+  id: string;
+  userId: string;
+  tableName: string;
+  operation: 'INSERT' | 'UPDATE' | 'DELETE';
+  oldValues?: Record<string, any>;
+  newValues?: Record<string, any>;
+  changedFields: string[];
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: string;
+}
+
+// Settings Utility Types
+export type SettingsCategory = 'profile' | 'notifications' | 'display' | 'privacy' | 'accounts';
+export type ThemeOption = 'light' | 'dark' | 'system';
+export type SyncFrequency = 'realtime' | 'hourly' | 'daily';
+export type DateFormatOption = 'MM/dd/yyyy' | 'dd/MM/yyyy' | 'yyyy-MM-dd' | 'MMM dd, yyyy';
+export type CurrencyOption = 'USD' | 'EUR' | 'GBP' | 'CAD' | 'AUD' | 'JPY';
+export type LanguageOption = 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'zh' | 'ja';
+export type TimezoneOption = 'America/New_York' | 'America/Chicago' | 'America/Denver' | 'America/Los_Angeles' | 'Europe/London' | 'Europe/Paris' | 'Asia/Tokyo' | 'Australia/Sydney';
+
+// Settings Default Values
+export const DEFAULT_USER_PREFERENCES: Omit<UserPreferences, 'id' | 'userId' | 'createdAt' | 'updatedAt'> = {
+  firstName: undefined,
+  lastName: undefined,
+  phone: undefined,
+  profilePictureUrl: undefined,
+  theme: 'light',
+  currencyFormat: 'USD',
+  dateFormat: 'MM/dd/yyyy',
+  timezone: 'America/New_York',
+  language: 'en',
+  notificationsEnabled: true,
+  emailNotifications: true,
+  goalNotifications: true,
+  accountAlerts: true,
+  systemUpdates: false,
+  marketingEmails: false,
+  dataSharingAnalytics: false,
+  dataSharingMarketing: false,
+  twoFactorEnabled: false,
+  sessionTimeoutMinutes: 480,
+  autoSyncEnabled: true,
+  syncFrequency: 'daily',
+};
+
+// Settings Options
+export const THEME_OPTIONS: { value: ThemeOption; label: string }[] = [
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'system', label: 'System' },
+];
+
+export const CURRENCY_OPTIONS: { value: CurrencyOption; label: string; symbol: string }[] = [
+  { value: 'USD', label: 'US Dollar', symbol: '$' },
+  { value: 'EUR', label: 'Euro', symbol: '€' },
+  { value: 'GBP', label: 'British Pound', symbol: '£' },
+  { value: 'CAD', label: 'Canadian Dollar', symbol: 'C$' },
+  { value: 'AUD', label: 'Australian Dollar', symbol: 'A$' },
+  { value: 'JPY', label: 'Japanese Yen', symbol: '¥' },
+];
+
+export const DATE_FORMAT_OPTIONS: { value: DateFormatOption; label: string; example: string }[] = [
+  { value: 'MM/dd/yyyy', label: 'MM/DD/YYYY', example: '12/31/2024' },
+  { value: 'dd/MM/yyyy', label: 'DD/MM/YYYY', example: '31/12/2024' },
+  { value: 'yyyy-MM-dd', label: 'YYYY-MM-DD', example: '2024-12-31' },
+  { value: 'MMM dd, yyyy', label: 'MMM DD, YYYY', example: 'Dec 31, 2024' },
+];
+
+export const LANGUAGE_OPTIONS: { value: LanguageOption; label: string }[] = [
+  { value: 'en', label: 'English' },
+  { value: 'es', label: 'Español' },
+  { value: 'fr', label: 'Français' },
+  { value: 'de', label: 'Deutsch' },
+  { value: 'it', label: 'Italiano' },
+  { value: 'pt', label: 'Português' },
+  { value: 'zh', label: '中文' },
+  { value: 'ja', label: '日本語' },
+];
+
+export const TIMEZONE_OPTIONS: { value: TimezoneOption; label: string }[] = [
+  { value: 'America/New_York', label: 'Eastern Time (ET)' },
+  { value: 'America/Chicago', label: 'Central Time (CT)' },
+  { value: 'America/Denver', label: 'Mountain Time (MT)' },
+  { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
+  { value: 'Europe/London', label: 'Greenwich Mean Time (GMT)' },
+  { value: 'Europe/Paris', label: 'Central European Time (CET)' },
+  { value: 'Asia/Tokyo', label: 'Japan Standard Time (JST)' },
+  { value: 'Australia/Sydney', label: 'Australian Eastern Time (AET)' },
+];
+
+export const SYNC_FREQUENCY_OPTIONS: { value: SyncFrequency; label: string; description: string }[] = [
+  { value: 'realtime', label: 'Real-time', description: 'Sync immediately when changes occur' },
+  { value: 'hourly', label: 'Hourly', description: 'Sync every hour' },
+  { value: 'daily', label: 'Daily', description: 'Sync once per day' },
+];

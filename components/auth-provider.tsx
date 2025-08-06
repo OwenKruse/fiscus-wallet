@@ -46,9 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const handleSignIn = async (credentials: AuthSignInRequest) => {
     try {
       setError(null);
-      console.log('Attempting sign in with email:', credentials.email);
       await signIn(credentials);
-      console.log('Sign in successful');
       router.push('/'); // Redirect to dashboard after successful sign in
     } catch (err) {
       console.error('Sign in error details:', err);

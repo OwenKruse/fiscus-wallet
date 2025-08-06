@@ -4,6 +4,9 @@
 import { getPlaidService } from '../plaid/plaid-service';
 import { getCacheService } from '../cache/cache-service';
 import { getNileClient } from '../database/nile-client';
+import { getGoalService } from '../goals/goal-service';
+import { getGoalProgressCalculator } from '../goals/goal-progress-calculator';
+import { getGoalNotificationService } from '../goals/goal-notification-service';
 import { 
   SyncResult, 
   SyncOptions, 
@@ -11,7 +14,9 @@ import {
   Account, 
   Transaction,
   PlaidTransaction,
-  PlaidAccount 
+  PlaidAccount,
+  Goal,
+  GoalCalculationResult
 } from '../../types';
 
 export interface SyncJobOptions {
@@ -65,6 +70,9 @@ export class DataSyncService {
   private plaidService = getPlaidService();
   private cacheService = getCacheService();
   private nileClient = getNileClient();
+  private goalService = getGoalService();
+  private goalProgressCalculator = getGoalProgressCalculator();
+  private goalNotificationService = getGoalNotificationService();
   
   private syncJobs = new Map<string, SyncJob>();
   private jobQueue: SyncJob[] = [];
@@ -357,6 +365,20 @@ export class DataSyncService {
       this.updateAverageSyncTime(Date.now() - startTime);
       this.metrics.lastSyncTime = new Date();
 
+      // Calculate goal progress after successful sync
+      if (aggregatedResult.success) {
+        try {
+          const goalProgressResult = await this.calculateGoalProgressForUser(job.userId);
+          aggregatedResult.goalsUpdated = goalProgressResult.goalsUpdated;
+          aggregatedResult.goalCalculationErrors = goalProgressResult.errors;
+        } catch (error) {
+          console.error(`Goal progress calculation failed for user ${job.userId}:`, error);
+          aggregatedResult.goalCalculationErrors = [
+            error instanceof Error ? error.message : 'Unknown goal calculation error'
+          ];
+        }
+      }
+
       // Invalidate relevant caches
       await this.invalidateUserCaches(job.userId);
 
@@ -395,6 +417,8 @@ export class DataSyncService {
         accountsUpdated: 0,
         transactionsAdded: 0,
         transactionsUpdated: 0,
+        goalsUpdated: 0,
+        goalCalculationErrors: [],
         errors: [errorMessage],
         lastSyncTime: new Date(),
       };
@@ -655,6 +679,11 @@ export class DataSyncService {
       accountsUpdated: aggregate.accountsUpdated + result.accountsUpdated,
       transactionsAdded: aggregate.transactionsAdded + result.transactionsAdded,
       transactionsUpdated: aggregate.transactionsUpdated + result.transactionsUpdated,
+      goalsUpdated: (aggregate.goalsUpdated || 0) + (result.goalsUpdated || 0),
+      goalCalculationErrors: [
+        ...(aggregate.goalCalculationErrors || []),
+        ...(result.goalCalculationErrors || [])
+      ],
       errors: [...aggregate.errors, ...result.errors],
       lastSyncTime: result.lastSyncTime > aggregate.lastSyncTime ? result.lastSyncTime : aggregate.lastSyncTime,
     }), {
@@ -662,6 +691,8 @@ export class DataSyncService {
       accountsUpdated: 0,
       transactionsAdded: 0,
       transactionsUpdated: 0,
+      goalsUpdated: 0,
+      goalCalculationErrors: [],
       errors: [],
       lastSyncTime: new Date(0),
     });
@@ -684,6 +715,135 @@ export class DataSyncService {
     } else {
       this.metrics.averageSyncTime = ((currentAvg * (totalSyncs - 1)) + syncTime) / totalSyncs;
     }
+  }
+
+  /**
+   * Calculates goal progress for a user after financial data sync
+   * @param userId - The user ID
+   * @returns Promise resolving to goal calculation results
+   */
+  private async calculateGoalProgressForUser(userId: string): Promise<{
+    goalsUpdated: number;
+    errors: string[];
+  }> {
+    try {
+      console.log(`Calculating goal progress for user ${userId}`);
+
+      // Get all active goals for the user that support automatic tracking
+      const goals = await this.goalService.getGoals(userId, {
+        status: ['active'],
+        sortBy: 'created_at',
+        sortOrder: 'asc'
+      });
+
+      if (!goals || !Array.isArray(goals)) {
+        console.log(`No goals found or invalid goals data for user ${userId}`);
+        return { goalsUpdated: 0, errors: [] };
+      }
+
+      // Filter goals that support automatic calculation
+      const automaticGoals = goals.filter(goal => 
+        goal.trackingMethod === 'account_balance' || 
+        goal.trackingMethod === 'transaction_category'
+      );
+
+      if (automaticGoals.length === 0) {
+        console.log(`No goals with automatic tracking found for user ${userId}`);
+        return { goalsUpdated: 0, errors: [] };
+      }
+
+      console.log(`Found ${automaticGoals.length} goals with automatic tracking for user ${userId}`);
+
+      // Calculate progress for all automatic goals
+      const calculationResults = await this.goalProgressCalculator.calculateMultipleGoalsProgress(automaticGoals);
+      
+      let goalsUpdated = 0;
+      const errors: string[] = [];
+
+      // Update each goal with calculated progress
+      for (const result of calculationResults) {
+        try {
+          const goal = automaticGoals.find(g => g.id === result.goalId);
+          if (!goal) {
+            errors.push(`Goal ${result.goalId} not found during progress update`);
+            continue;
+          }
+
+          // Only update if there's a meaningful change (avoid unnecessary updates)
+          const progressDifference = Math.abs(result.currentAmount - goal.currentAmount);
+          if (progressDifference < 0.01) {
+            console.log(`Skipping goal ${goal.id} - no significant progress change`);
+            continue;
+          }
+
+          // Store previous amount for notification comparison
+          const previousAmount = goal.currentAmount;
+
+          // Update the goal's current amount
+          await this.goalService.updateGoal(goal.id, userId, {
+            currentAmount: result.currentAmount
+          });
+
+          // Add progress entries if any
+          for (const progressEntry of result.progressEntries) {
+            if (Math.abs(progressEntry.amount) >= 0.01) { // Only add meaningful progress entries
+              await this.goalService.addManualProgress(goal.id, userId, {
+                amount: Math.abs(progressEntry.amount),
+                progressType: progressEntry.amount >= 0 ? 'manual_add' : 'manual_subtract',
+                description: progressEntry.description || 'Automatic progress calculation'
+              });
+            }
+          }
+
+          // Generate notifications for progress changes
+          try {
+            const updatedGoal = { ...goal, currentAmount: result.currentAmount };
+            const notifications = await this.goalNotificationService.processGoalProgressChange(
+              updatedGoal,
+              previousAmount,
+              result.currentAmount
+            );
+            
+            if (notifications.length > 0) {
+              console.log(`Generated ${notifications.length} notifications for goal ${goal.id}`);
+            }
+          } catch (notificationError) {
+            console.error(`Failed to generate notifications for goal ${goal.id}:`, notificationError);
+            // Don't fail the entire sync for notification errors
+          }
+
+          goalsUpdated++;
+          console.log(`Updated goal ${goal.id} (${goal.title}) - new amount: ${result.currentAmount}`);
+
+        } catch (error) {
+          const errorMessage = `Failed to update goal ${result.goalId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          errors.push(errorMessage);
+          console.error(errorMessage, error);
+        }
+      }
+
+      console.log(`Goal progress calculation completed for user ${userId}: ${goalsUpdated} goals updated`);
+      
+      return { goalsUpdated, errors };
+
+    } catch (error) {
+      const errorMessage = `Goal progress calculation failed for user ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      console.error(errorMessage, error);
+      return { goalsUpdated: 0, errors: [errorMessage] };
+    }
+  }
+
+  /**
+   * Manually trigger goal progress calculation for a user
+   * @param userId - The user ID
+   * @returns Promise resolving to calculation results
+   */
+  async calculateGoalProgress(userId: string): Promise<{
+    goalsUpdated: number;
+    errors: string[];
+  }> {
+    console.log(`Manual goal progress calculation requested for user ${userId}`);
+    return this.calculateGoalProgressForUser(userId);
   }
 
   /**

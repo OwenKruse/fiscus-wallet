@@ -524,17 +524,6 @@ export default function AnalyticsPage() {
                                 <Input placeholder="Search..." className="pl-10 w-64" />
                             </div>
 
-                            <Select value={timeframe} onValueChange={setTimeframe}>
-                                <SelectTrigger className="w-32">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="1month">1 Month</SelectItem>
-                                    <SelectItem value="3months">3 Months</SelectItem>
-                                    <SelectItem value="6months">6 Months</SelectItem>
-                                    <SelectItem value="1year">1 Year</SelectItem>
-                                </SelectContent>
-                            </Select>
 
                             <Button variant="ghost" size="icon" className="relative">
                                 <Bell className="h-5 w-5" />
@@ -553,9 +542,7 @@ export default function AnalyticsPage() {
                                 {isSyncing ? 'Syncing...' : 'Refresh'}
                             </Button>
 
-                            <Button variant="ghost" size="icon">
-                                <User className="h-5 w-5" />
-                            </Button>
+                           
 
                             <CalendarComponent dateRange={dateRange} onDateRangeChange={handleDateRangeChange} />
                         </div>

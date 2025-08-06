@@ -337,16 +337,6 @@ export default function FinanceDashboard() {
                     </>
                   )}
                 </div>
-                <div className="flex gap-2 mt-4">
-                  <Button size="sm" className="bg-black text-white">
-                    <ArrowUp className="h-3 w-3 mr-1" />
-                    Transfer
-                  </Button>
-                  <Button size="sm" variant="outline">
-                    <ArrowDown className="h-3 w-3 mr-1" />
-                    Request
-                  </Button>
-                </div>
               </CardContent>
             </Card>
 

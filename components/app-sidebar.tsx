@@ -114,11 +114,11 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <a href="#">
+                  <SidebarMenuButton asChild isActive={pathname === "/settings"}>
+                    <Link href="/settings">
                       <Settings />
                       <span>Preferences</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

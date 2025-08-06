@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withApiAuth, withApiLogging } from '../../../../../lib/auth/api-middleware';
-import { getGoalService } from '../../../../../lib/goals/goal-service';
-import { GoalProgressCalculator } from '../../../../../lib/goals/goal-progress-calculator';
+import { getGoalsManager } from '../../../../../lib/goals/goals-manager';
 import { ApiResponse } from '../../../../../types';
 
 // Create error response helper
@@ -42,10 +41,10 @@ async function calculateProgressHandler(
       return createErrorResponse('Goal ID is required', 400, 'MISSING_PARAMETER');
     }
 
-    const goalService = getGoalService();
+    const goalsManager = getGoalsManager();
     
     // First, verify the goal exists and belongs to the user
-    const goal = await goalService.getGoal(goalId, user.id);
+    const goal = await goalsManager.getGoal(goalId, user.id);
     
     if (!goal) {
       return createErrorResponse('Goal not found or access denied', 404, 'GOAL_NOT_FOUND');
@@ -61,18 +60,13 @@ async function calculateProgressHandler(
     }
 
     // Trigger automatic progress calculation
-    await goalService.calculateAutomaticProgress(goalId, user.id);
-
-    // Get the updated goal to return current progress
-    const updatedGoal = await goalService.getGoal(goalId, user.id);
+    const updatedGoal = await goalsManager.calculateAndUpdateGoalProgress(goalId, user.id);
 
     return createSuccessResponse(
       {
         goalId: goalId,
-        currentAmount: updatedGoal?.currentAmount || 0,
-        progressPercentage: updatedGoal 
-          ? Math.min(100, (updatedGoal.currentAmount / updatedGoal.targetAmount) * 100)
-          : 0,
+        currentAmount: updatedGoal.currentAmount || 0,
+        progressPercentage: Math.min(100, (updatedGoal.currentAmount / updatedGoal.targetAmount) * 100),
         lastCalculated: new Date().toISOString()
       },
       'Progress calculated successfully'

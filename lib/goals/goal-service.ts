@@ -285,9 +285,17 @@ export class GoalService {
           throw new Error('Failed to retrieve created goal');
         }
 
-        // Parse JSON fields
+        // Parse JSON fields and convert numeric fields
         if (goal.trackingConfig && typeof goal.trackingConfig === 'string') {
           goal.trackingConfig = JSON.parse(goal.trackingConfig);
+        }
+
+        // Convert string decimals to numbers
+        if (typeof goal.targetAmount === 'string') {
+          goal.targetAmount = parseFloat(goal.targetAmount);
+        }
+        if (typeof goal.currentAmount === 'string') {
+          goal.currentAmount = parseFloat(goal.currentAmount);
         }
 
         return goal;
@@ -427,9 +435,17 @@ export class GoalService {
           throw new Error('Failed to retrieve updated goal');
         }
 
-        // Parse JSON fields
+        // Parse JSON fields and convert numeric fields
         if (goal.trackingConfig && typeof goal.trackingConfig === 'string') {
           goal.trackingConfig = JSON.parse(goal.trackingConfig);
+        }
+
+        // Convert string decimals to numbers
+        if (typeof goal.targetAmount === 'string') {
+          goal.targetAmount = parseFloat(goal.targetAmount);
+        }
+        if (typeof goal.currentAmount === 'string') {
+          goal.currentAmount = parseFloat(goal.currentAmount);
         }
 
         return goal;
@@ -570,9 +586,16 @@ export class GoalService {
 
       const goals = await this.dbClient.query<Goal>(query, params);
 
-      // Parse JSON fields for each goal
+      // Handle case where query returns undefined or null
+      if (!goals || !Array.isArray(goals)) {
+        return [];
+      }
+
+      // Parse JSON fields and convert numeric fields for each goal
       return goals.map(goal => ({
         ...goal,
+        targetAmount: typeof goal.targetAmount === 'string' ? parseFloat(goal.targetAmount) : goal.targetAmount,
+        currentAmount: typeof goal.currentAmount === 'string' ? parseFloat(goal.currentAmount) : goal.currentAmount,
         trackingConfig: goal.trackingConfig && typeof goal.trackingConfig === 'string' 
           ? JSON.parse(goal.trackingConfig) 
           : goal.trackingConfig
@@ -615,9 +638,17 @@ export class GoalService {
         return null;
       }
 
-      // Parse JSON fields
+      // Parse JSON fields and convert numeric fields
       if (goal.trackingConfig && typeof goal.trackingConfig === 'string') {
         goal.trackingConfig = JSON.parse(goal.trackingConfig);
+      }
+
+      // Convert string decimals to numbers
+      if (typeof goal.targetAmount === 'string') {
+        goal.targetAmount = parseFloat(goal.targetAmount);
+      }
+      if (typeof goal.currentAmount === 'string') {
+        goal.currentAmount = parseFloat(goal.currentAmount);
       }
 
       return goal;
@@ -813,9 +844,17 @@ export class GoalService {
         return null;
       }
 
-      // Parse JSON fields
+      // Parse JSON fields and convert numeric fields
       if (goal.trackingConfig && typeof goal.trackingConfig === 'string') {
         goal.trackingConfig = JSON.parse(goal.trackingConfig);
+      }
+
+      // Convert string decimals to numbers
+      if (typeof goal.targetAmount === 'string') {
+        goal.targetAmount = parseFloat(goal.targetAmount);
+      }
+      if (typeof goal.currentAmount === 'string') {
+        goal.currentAmount = parseFloat(goal.currentAmount);
       }
 
       return goal;

@@ -3,6 +3,7 @@ import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import './globals.css'
 import { AuthProvider } from '@/components/auth-provider'
+import { SettingsProvider } from '@/components/settings-provider'
 
 export const metadata: Metadata = {
   title: 'Wallet from Fiscus Financial',
@@ -27,7 +28,9 @@ html {
       </head>
       <body>
         <AuthProvider>
-          {children}
+          <SettingsProvider>
+            {children}
+          </SettingsProvider>
         </AuthProvider>
       </body>
     </html>

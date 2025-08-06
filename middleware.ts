@@ -18,9 +18,6 @@ export async function middleware(request: NextRequest) {
     signInUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(signInUrl)
   }
-
-  // For authenticated requests, let client-side handle onboarding routing
-  // This avoids Edge Runtime compatibility issues with database calls
   return NextResponse.next()
 }
 

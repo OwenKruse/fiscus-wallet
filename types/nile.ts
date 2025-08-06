@@ -204,6 +204,8 @@ export interface SyncResult {
   accountsUpdated: number;
   transactionsAdded: number;
   transactionsUpdated: number;
+  goalsUpdated?: number;
+  goalCalculationErrors?: string[];
   errors: string[];
   lastSyncTime: Date;
 }

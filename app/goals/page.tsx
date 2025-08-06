@@ -42,7 +42,7 @@ import CalendarComponent from "@/components/calandar-date-range"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useGoals, useAccounts, usePrimaryGoal } from "@/hooks/use-api"
+import { useGoals, useAccounts, usePrimaryGoal, useGoal } from "@/hooks/use-api"
 import { Goal, GoalsFilters } from "@/types"
 import { useToast } from "@/hooks/use-toast"
 
@@ -117,6 +117,17 @@ export default function GoalsPage() {
     const [formErrors, setFormErrors] = useState<Record<string, string>>({})
     const [isSubmitting, setIsSubmitting] = useState(false)
 
+    // Manual progress entry state
+    const [isAddProgressOpen, setIsAddProgressOpen] = useState(false)
+    const [progressFormData, setProgressFormData] = useState({
+        amount: '',
+        progressType: 'manual_add' as 'manual_add' | 'manual_subtract' | 'adjustment',
+        description: ''
+    })
+    const [progressFormErrors, setProgressFormErrors] = useState<Record<string, string>>({})
+    const [isSubmittingProgress, setIsSubmittingProgress] = useState(false)
+    const [isRecalculatingProgress, setIsRecalculatingProgress] = useState(false)
+
     // Use real API data
     const {
         goals,
@@ -142,6 +153,12 @@ export default function GoalsPage() {
         loading: primaryLoading,
         setPrimaryState
     } = usePrimaryGoal()
+
+    // Individual goal hook for manual progress
+    const {
+        addProgress,
+        addProgressState
+    } = useGoal(selectedGoal?.id || '')
 
     const formatCurrency = (amount: number | null | undefined) => {
         if (typeof amount !== 'number' || isNaN(amount)) {
@@ -312,6 +329,34 @@ export default function GoalsPage() {
         setEditingGoal(null)
     }
 
+    // Reset progress form
+    const resetProgressForm = () => {
+        setProgressFormData({
+            amount: '',
+            progressType: 'manual_add',
+            description: ''
+        })
+        setProgressFormErrors({})
+    }
+
+    // Validate progress form
+    const validateProgressForm = () => {
+        const errors: Record<string, string> = {}
+
+        if (!progressFormData.amount || parseFloat(progressFormData.amount) <= 0) {
+            errors.amount = 'Amount must be greater than 0'
+        } else if (parseFloat(progressFormData.amount) > 999999999999) {
+            errors.amount = 'Amount is too large'
+        }
+
+        if (!progressFormData.progressType) {
+            errors.progressType = 'Progress type is required'
+        }
+
+        setProgressFormErrors(errors)
+        return Object.keys(errors).length === 0
+    }
+
     // Handle form submission for create/edit
     const handleSubmitGoal = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -454,6 +499,92 @@ export default function GoalsPage() {
         }
     }
 
+    // Handle progress form input changes
+    const handleProgressInputChange = (field: string, value: string) => {
+        setProgressFormData(prev => ({ ...prev, [field]: value }))
+        // Clear error when user starts typing
+        if (progressFormErrors[field]) {
+            setProgressFormErrors(prev => ({ ...prev, [field]: '' }))
+        }
+    }
+
+    // Handle manual progress submission
+    const handleSubmitProgress = async (e: React.FormEvent) => {
+        e.preventDefault()
+
+        if (!validateProgressForm() || !selectedGoal) {
+            return
+        }
+
+        setIsSubmittingProgress(true)
+
+        try {
+            const progressData = {
+                amount: parseFloat(progressFormData.amount),
+                progressType: progressFormData.progressType,
+                description: progressFormData.description.trim() || undefined
+            }
+
+            await addProgress(progressData)
+
+            // Refresh goals to get updated progress
+            await refreshGoals()
+
+            setIsAddProgressOpen(false)
+            resetProgressForm()
+
+            toast({
+                title: "Progress added",
+                description: "Your progress has been successfully recorded.",
+            })
+        } catch (error) {
+            console.error('Failed to add progress:', error)
+            toast({
+                title: "Error",
+                description: "Failed to add progress. Please try again.",
+                variant: "destructive",
+            })
+        } finally {
+            setIsSubmittingProgress(false)
+        }
+    }
+
+    // Handle recalculate progress
+    const handleRecalculateProgress = async (goalId: string) => {
+        setIsRecalculatingProgress(true)
+
+        try {
+            // Use the API client directly since we don't have a hook for this
+            const response = await fetch(`/api/goals/${goalId}/calculate`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+
+            if (!response.ok) {
+                throw new Error('Failed to recalculate progress')
+            }
+
+            // Refresh goals to get updated progress
+            await refreshGoals()
+
+            toast({
+                title: "Progress recalculated",
+                description: "Your goal progress has been updated based on your latest financial data.",
+            })
+        } catch (error) {
+            console.error('Failed to recalculate progress:', error)
+            toast({
+                title: "Error",
+                description: "Failed to recalculate progress. Please try again.",
+                variant: "destructive",
+            })
+        } finally {
+            setIsRecalculatingProgress(false)
+        }
+    }
+
     return (
         <DashboardLayout>
             <SidebarInset className="flex flex-col h-full">
@@ -478,9 +609,7 @@ export default function GoalsPage() {
                                 </span>
                             </Button>
 
-                            <Button variant="ghost" size="icon">
-                                <User className="h-5 w-5" />
-                            </Button>
+
 
                             <CalendarComponent dateRange={dateRange} onDateRangeChange={setDateRange} />
                         </div>
@@ -881,7 +1010,7 @@ export default function GoalsPage() {
                         setIsEditGoalOpen(open)
                         if (!open) resetForm()
                     }}>
-                        <DialogContent className="sm:max-w-[425px]">
+                        <DialogContent className="sm:max-w-[425px] max-h-screen overflow-y-scroll">
                             <DialogHeader>
                                 <DialogTitle>Edit Goal</DialogTitle>
                                 <DialogDescription>Update your financial goal details.</DialogDescription>
@@ -1187,8 +1316,8 @@ export default function GoalsPage() {
                     </Dialog>
 
                     {/* Goals Tabs */}
-                    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 py-2">
-                        <TabsList>
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 py-2 max-w-screen">
+                        <TabsList className="max-w-screen overflow-x-scroll">
                             <TabsTrigger value="all">All Goals</TabsTrigger>
                             <TabsTrigger value="active">Active</TabsTrigger>
                             <TabsTrigger value="completed">Completed</TabsTrigger>
@@ -1284,8 +1413,8 @@ export default function GoalsPage() {
                                             <Card
                                                 key={goal.id}
                                                 className={`cursor-pointer hover:shadow-lg transition-shadow ${goal.isPrimary
-                                                        ? 'ring-2 ring-yellow-400 bg-yellow-50/50'
-                                                        : ''
+                                                    ? 'ring-2 ring-yellow-400 bg-yellow-50/50'
+                                                    : ''
                                                     }`}
                                                 onClick={() => setSelectedGoal(goal)}
                                             >
@@ -1435,10 +1564,27 @@ export default function GoalsPage() {
                                         </div>
 
                                         <div className="flex space-x-2">
-                                            <Button className="flex-1">Add Money</Button>
+                                            {selectedGoal.trackingMethod === 'manual' ? (
+                                                <Button
+                                                    className="flex-1"
+                                                    onClick={() => setIsAddProgressOpen(true)}
+                                                >
+                                                    <Plus className="mr-2 h-4 w-4" />
+                                                    Add Progress
+                                                </Button>
+                                            ) : (
+                                                <Button
+                                                    className="flex-1"
+                                                    onClick={() => handleRecalculateProgress(selectedGoal.id)}
+                                                    disabled={isRecalculatingProgress}
+                                                >
+                                                    <TrendingUp className="mr-2 h-4 w-4" />
+                                                    {isRecalculatingProgress ? 'Calculating...' : 'Recalculate'}
+                                                </Button>
+                                            )}
                                             <Button
                                                 variant="outline"
-                                                className="flex-1 bg-transparent"
+                                                className={selectedGoal.trackingMethod === 'manual' ? '' : 'flex-1 bg-transparent'}
                                                 onClick={() => handleEditGoal(selectedGoal)}
                                             >
                                                 Edit Goal
@@ -1469,6 +1615,102 @@ export default function GoalsPage() {
                                     </div>
                                 </>
                             )}
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Manual Progress Entry Dialog */}
+                    <Dialog open={isAddProgressOpen} onOpenChange={(open) => {
+                        setIsAddProgressOpen(open)
+                        if (!open) resetProgressForm()
+                    }}>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                                <DialogTitle>Add Progress</DialogTitle>
+                                <DialogDescription>
+                                    Record progress for "{selectedGoal?.title}"
+                                </DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handleSubmitProgress}>
+                                <div className="grid gap-4 py-4">
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="progressType" className="text-right">
+                                            Type *
+                                        </Label>
+                                        <div className="col-span-3">
+                                            <Select
+                                                value={progressFormData.progressType}
+                                                onValueChange={(value) => handleProgressInputChange('progressType', value)}
+                                            >
+                                                <SelectTrigger className={progressFormErrors.progressType ? 'border-red-500' : ''}>
+                                                    <SelectValue placeholder="Select progress type" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="manual_add">Add Money</SelectItem>
+                                                    <SelectItem value="manual_subtract">Subtract Money</SelectItem>
+                                                    <SelectItem value="adjustment">Set Total Amount</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            {progressFormErrors.progressType && (
+                                                <p className="text-sm text-red-500 mt-1">{progressFormErrors.progressType}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="progressAmount" className="text-right">
+                                            Amount *
+                                        </Label>
+                                        <div className="col-span-3">
+                                            <Input
+                                                id="progressAmount"
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                value={progressFormData.amount}
+                                                onChange={(e) => handleProgressInputChange('amount', e.target.value)}
+                                                className={progressFormErrors.amount ? 'border-red-500' : ''}
+                                                placeholder="0.00"
+                                            />
+                                            {progressFormErrors.amount && (
+                                                <p className="text-sm text-red-500 mt-1">{progressFormErrors.amount}</p>
+                                            )}
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                {progressFormData.progressType === 'manual_add' && 'Amount to add to your goal'}
+                                                {progressFormData.progressType === 'manual_subtract' && 'Amount to subtract from your goal'}
+                                                {progressFormData.progressType === 'adjustment' && 'Set your total saved amount to this value'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="progressDescription" className="text-right">
+                                            Description
+                                        </Label>
+                                        <Textarea
+                                            id="progressDescription"
+                                            className="col-span-3"
+                                            value={progressFormData.description}
+                                            onChange={(e) => handleProgressInputChange('description', e.target.value)}
+                                            placeholder="Optional note about this progress entry"
+                                            rows={2}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex justify-end space-x-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setIsAddProgressOpen(false)}
+                                        disabled={isSubmittingProgress}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        disabled={isSubmittingProgress || !progressFormData.amount || parseFloat(progressFormData.amount) <= 0}
+                                    >
+                                        {isSubmittingProgress ? 'Adding...' : 'Add Progress'}
+                                    </Button>
+                                </div>
+                            </form>
                         </DialogContent>
                     </Dialog>
                 </div>

@@ -175,3 +175,80 @@ model GoalProgress {
   @@map("goal_progress")
   @@schema("public")
 }
+
+model UserSetting {
+  id        String   @id @default(dbgenerated("public.uuid_generate_v7()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  category  String   @db.VarChar(50)
+  key       String   @db.VarChar(100)
+  value     Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([userId, category, key], name: "unique_user_category_key")
+  @@index([userId])
+  @@index([category])
+  @@index([userId, category], map: "idx_user_settings_user_category")
+  @@index([key])
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@map("user_settings")
+  @@schema("public")
+}
+
+model UserPreferences {
+  id                     String   @id @default(dbgenerated("public.uuid_generate_v7()")) @db.Uuid
+  userId                 String   @unique @map("user_id") @db.Uuid
+  firstName              String?  @map("first_name") @db.VarChar(255)
+  lastName               String?  @map("last_name") @db.VarChar(255)
+  phone                  String?  @db.VarChar(50)
+  profilePictureUrl      String?  @map("profile_picture_url")
+  theme                  String   @default("light") @db.VarChar(20)
+  currencyFormat         String   @default("USD") @map("currency_format") @db.VarChar(10)
+  dateFormat             String   @default("MM/dd/yyyy") @map("date_format") @db.VarChar(20)
+  timezone               String   @default("America/New_York") @db.VarChar(50)
+  language               String   @default("en") @db.VarChar(10)
+  notificationsEnabled   Boolean  @default(true) @map("notifications_enabled")
+  emailNotifications     Boolean  @default(true) @map("email_notifications")
+  goalNotifications      Boolean  @default(true) @map("goal_notifications")
+  accountAlerts          Boolean  @default(true) @map("account_alerts")
+  systemUpdates          Boolean  @default(false) @map("system_updates")
+  marketingEmails        Boolean  @default(false) @map("marketing_emails")
+  dataSharingAnalytics   Boolean  @default(false) @map("data_sharing_analytics")
+  dataSharingMarketing   Boolean  @default(false) @map("data_sharing_marketing")
+  twoFactorEnabled       Boolean  @default(false) @map("two_factor_enabled")
+  sessionTimeoutMinutes  Int      @default(480) @map("session_timeout_minutes")
+  autoSyncEnabled        Boolean  @default(true) @map("auto_sync_enabled")
+  syncFrequency          String   @default("daily") @map("sync_frequency") @db.VarChar(20)
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([userId])
+  @@index([theme])
+  @@index([notificationsEnabled])
+  @@index([twoFactorEnabled])
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@map("user_preferences")
+  @@schema("public")
+}
+
+model UserSettingsAudit {
+  id            String    @id @default(dbgenerated("public.uuid_generate_v7()")) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  tableName     String    @map("table_name") @db.VarChar(50)
+  operation     String    @db.VarChar(10)
+  oldValues     Json?     @map("old_values")
+  newValues     Json?     @map("new_values")
+  changedFields String[]  @map("changed_fields")
+  ipAddress     String?   @map("ip_address") @db.Inet
+  userAgent     String?   @map("user_agent")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([userId])
+  @@index([tableName])
+  @@index([operation])
+  @@index([createdAt])
+  @@map("user_settings_audit")
+  @@schema("public")
+}
