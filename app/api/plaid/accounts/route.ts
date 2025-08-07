@@ -31,20 +31,43 @@ async function getAccountsHandler(
     const accounts = await plaidService.getAccountsWithInstitution(user.id);
 
     // Transform accounts to match API response format
-    const transformedAccounts = accounts.map(account => ({
-      id: account.id,
-      name: account.name,
-      officialName: account.officialName || undefined,
-      type: account.type,
-      subtype: account.subtype,
-      balance: {
-        available: account.balance.available || undefined,
-        current: account.balance.current,
-        limit: account.balance.limit || undefined
-      },
-      institutionName: account.institutionName || 'Unknown Bank',
-      lastUpdated: account.lastUpdated.toISOString()
-    }));
+    const transformedAccounts = accounts.map((account, index) => {
+      try {
+        // Ensure lastUpdated is properly handled
+        let lastUpdatedString: string;
+        if (account.lastUpdated) {
+          if (account.lastUpdated instanceof Date) {
+            lastUpdatedString = account.lastUpdated.toISOString();
+          } else if (typeof account.lastUpdated === 'string') {
+            lastUpdatedString = new Date(account.lastUpdated).toISOString();
+          } else {
+            console.warn(`Account ${account.id} has invalid lastUpdated format:`, account.lastUpdated);
+            lastUpdatedString = new Date().toISOString();
+          }
+        } else {
+          console.warn(`Account ${account.id} has no lastUpdated field, using current time`);
+          lastUpdatedString = new Date().toISOString();
+        }
+
+        return {
+          id: account.id,
+          name: account.name,
+          officialName: account.officialName || undefined,
+          type: account.type,
+          subtype: account.subtype,
+          balance: {
+            available: account.balance?.available || undefined,
+            current: account.balance?.current || 0,
+            limit: account.balance?.limit || undefined
+          },
+          institutionName: account.institutionName || 'Unknown Bank',
+          lastUpdated: lastUpdatedString
+        };
+      } catch (transformError) {
+        console.error(`Error transforming account ${account.id}:`, transformError, account);
+        throw transformError;
+      }
+    });
 
     const response: AccountsResponse = {
       accounts: transformedAccounts

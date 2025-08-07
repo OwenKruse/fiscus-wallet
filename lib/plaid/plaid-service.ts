@@ -352,7 +352,7 @@ export class PlaidService {
           'current', a.balance_current,
           'limit', a.balance_limit
         ) as balance,
-        a.last_updated,
+        COALESCE(a.last_updated, a.updated_at, a.created_at) as last_updated,
         a.created_at,
         a.updated_at,
         pc.institution_name as "institutionName"

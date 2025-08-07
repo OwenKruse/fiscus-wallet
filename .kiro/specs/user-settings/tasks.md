@@ -75,26 +75,26 @@
   - Create EmailChangeForm with verification workflow
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 6.3 Create notification settings components
+- [x] 6.3 Create notification settings components
   - Build NotificationToggleGroup with switches for different notification types
   - Implement EmailPreferencesForm for email notification settings
   - Add confirmation dialogs for notification changes
   - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-- [ ] 6.4 Create display settings components
+- [x] 6.4 Create display settings components
   - Build ThemeSelector component with light/dark/system options
   - Implement CurrencySelector and DateFormatSelector dropdowns
   - Create LanguageSelector component for internationalization
   - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
-- [ ] 6.5 Create privacy settings components
+- [x] 6.5 Create privacy settings components
   - Build PasswordChangeForm with current password verification
   - Implement TwoFactorSetup component with QR code generation
   - Create DataSharingPreferences with toggle controls
   - Add AccountDeletionDialog with confirmation workflow
   - _Requirements: 5.1, 5.2, 5.3, 5.4_
 
-- [ ] 6.6 Create accounts settings components
+- [x] 6.6 Create accounts settings components
   - Build ConnectedAccountsList showing Plaid account connections
   - Implement AccountConnectionManager for connect/disconnect actions
   - Add connection status indicators and last sync information

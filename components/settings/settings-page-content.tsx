@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, User, Bell, Monitor, Shield, CreditCard } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
-import { ProfileForm, ProfilePictureUpload, EmailChangeForm } from '@/components/settings';
+import { ProfileForm, ProfilePictureUpload, EmailChangeForm, NotificationSettings, DisplaySettings, PrivacySettings, AccountsSettings } from '@/components/settings';
 
 export function SettingsPageContent() {
   const { settings, isLoading, error } = useSettings();
@@ -84,67 +84,19 @@ export function SettingsPageContent() {
         </TabsContent>
 
         <TabsContent value="notifications" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notification Settings</CardTitle>
-              <CardDescription>
-                Control how and when you receive notifications.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-sm text-muted-foreground">
-                Notification settings components will be implemented in the next task.
-              </div>
-            </CardContent>
-          </Card>
+          <NotificationSettings />
         </TabsContent>
 
         <TabsContent value="display" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Display Settings</CardTitle>
-              <CardDescription>
-                Customize the appearance and display preferences.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-sm text-muted-foreground">
-                Display settings components will be implemented in the next task.
-              </div>
-            </CardContent>
-          </Card>
+          <DisplaySettings />
         </TabsContent>
 
         <TabsContent value="privacy" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Privacy & Security</CardTitle>
-              <CardDescription>
-                Manage your privacy preferences and security settings.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-sm text-muted-foreground">
-                Privacy settings components will be implemented in the next task.
-              </div>
-            </CardContent>
-          </Card>
+          <PrivacySettings />
         </TabsContent>
 
         <TabsContent value="accounts" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Connected Accounts</CardTitle>
-              <CardDescription>
-                Manage your connected financial accounts and integrations.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-sm text-muted-foreground">
-                Account settings components will be implemented in the next task.
-              </div>
-            </CardContent>
-          </Card>
+          <AccountsSettings />
         </TabsContent>
       </Tabs>
     </div>
