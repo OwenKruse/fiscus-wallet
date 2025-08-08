@@ -384,6 +384,12 @@ export const apiUtils = {
           return 'Failed to load goals analytics. Please try again.';
         case 'GET_GOAL_FAILED':
           return 'Failed to load goal details. Please try again.';
+        case 'SEARCH_FAILED':
+          return 'Search failed. Please try again.';
+        case 'SEARCH_ERROR':
+          return 'Search service is temporarily unavailable. Please try again.';
+        case 'SERVICE_UNAVAILABLE':
+          return 'Search service is temporarily unavailable. Please try again later.';
         default:
           return error.message || 'An unexpected error occurred.';
       }
@@ -656,11 +662,44 @@ export const goalsApi = {
   },
 };
 
+// Search API client functions
+export const searchApi = {
+  // Perform unified search across transactions, goals, and pages
+  async search(query: string, options: { categories?: ('transactions' | 'goals' | 'pages')[], limit?: number } = {}): Promise<import('../types').SearchResponse> {
+    const searchParams = new URLSearchParams();
+    searchParams.set('query', query);
+    
+    if (options.categories?.length) {
+      searchParams.set('categories', options.categories.join(','));
+    }
+    
+    if (options.limit) {
+      searchParams.set('limit', options.limit.toString());
+    }
+
+    const endpoint = `/api/search?${searchParams.toString()}`;
+    
+    const response = await apiRequest<ApiResponse<import('../types').SearchResponse>>(endpoint, {
+      method: 'GET',
+    });
+    
+    if (!response.success) {
+      throw new ApiError(
+        response.error?.message || 'Search failed',
+        response.error?.code || 'SEARCH_FAILED'
+      );
+    }
+    
+    return response.data!;
+  },
+};
+
 // Export all API functions
 export default {
   auth: authApi,
   plaid: plaidApi,
   financial: financialApi,
   goals: goalsApi,
+  search: searchApi,
   utils: apiUtils,
 }; 

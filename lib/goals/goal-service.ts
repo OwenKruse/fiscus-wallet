@@ -2,10 +2,10 @@
 
 import crypto from 'crypto';
 import { getNileClient } from '../database/nile-client';
-import { 
-  Goal, 
+import {
+  Goal,
   GoalProgress,
-  CreateGoalRequest, 
+  CreateGoalRequest,
   UpdateGoalRequest,
   GoalProgressRequest,
   GoalsFilters,
@@ -230,7 +230,7 @@ export class GoalService {
     return this.executeWithRetry(async () => {
       return this.dbClient.transaction(async (client) => {
         const goalId = crypto.randomUUID();
-        
+
         // Insert the goal
         await client.query(`
           INSERT INTO goals (
@@ -382,7 +382,7 @@ export class GoalService {
         if ('trackingConfig' in data) {
           updateFields.push(`tracking_config = $${paramIndex++}`);
           updateValues.push(data.trackingConfig ? JSON.stringify(data.trackingConfig) : null);
-          
+
           // Also update tracking_account_ids if accountIds are provided
           if (data.trackingConfig?.accountIds) {
             updateFields.push(`tracking_account_ids = $${paramIndex++}`);
@@ -548,13 +548,13 @@ export class GoalService {
         query += ` AND (title ILIKE $${paramIndex++} OR description ILIKE $${paramIndex++})`;
         const searchPattern = `%${filters.search}%`;
         params.push(searchPattern, searchPattern);
-        paramIndex++; // Account for the second search parameter
+
       }
 
       // Apply sorting
       const sortBy = filters.sortBy || 'created_at';
       const sortOrder = filters.sortOrder || 'desc';
-      
+
       let orderByClause = '';
       switch (sortBy) {
         case 'target_date':
@@ -569,14 +569,14 @@ export class GoalService {
         default:
           orderByClause = `ORDER BY created_at ${sortOrder}`;
       }
-      
+
       query += ` ${orderByClause}`;
 
       // Apply pagination
       if (filters.limit) {
         query += ` LIMIT $${paramIndex++}`;
         params.push(filters.limit);
-        
+
         if (filters.page && filters.page > 1) {
           const offset = (filters.page - 1) * filters.limit;
           query += ` OFFSET $${paramIndex++}`;
@@ -596,8 +596,8 @@ export class GoalService {
         ...goal,
         targetAmount: typeof goal.targetAmount === 'string' ? parseFloat(goal.targetAmount) : goal.targetAmount,
         currentAmount: typeof goal.currentAmount === 'string' ? parseFloat(goal.currentAmount) : goal.currentAmount,
-        trackingConfig: goal.trackingConfig && typeof goal.trackingConfig === 'string' 
-          ? JSON.parse(goal.trackingConfig) 
+        trackingConfig: goal.trackingConfig && typeof goal.trackingConfig === 'string'
+          ? JSON.parse(goal.trackingConfig)
           : goal.trackingConfig
       }));
     });
@@ -888,10 +888,10 @@ export class GoalService {
       const errors: string[] = [];
 
       // Check if goal exists and belongs to user
-      const goal = await this.dbClient.queryOne<{ 
-        id: string, 
-        status: string, 
-        targetDate: string 
+      const goal = await this.dbClient.queryOne<{
+        id: string,
+        status: string,
+        targetDate: string
       }>(`
         SELECT id, status, target_date as "targetDate" FROM goals 
         WHERE id = $1 AND user_id = $2
@@ -934,13 +934,13 @@ export class GoalService {
   } | null> {
     return this.executeWithRetry(async () => {
       const goal = await this.getPrimaryGoal(userId);
-      
+
       if (!goal) {
         return null;
       }
 
       // Calculate progress percentage
-      const progressPercentage = goal.targetAmount > 0 
+      const progressPercentage = goal.targetAmount > 0
         ? Math.min(100, (goal.currentAmount / goal.targetAmount) * 100)
         : 0;
 
@@ -955,9 +955,9 @@ export class GoalService {
       const dailyTargetAmount = daysRemaining > 0 ? remainingAmount / daysRemaining : remainingAmount;
 
       // Determine if on track (simplified calculation)
-      const expectedProgress = daysRemaining > 0 
-        ? ((new Date().getTime() - new Date(goal.createdAt).getTime()) / 
-           (targetDate.getTime() - new Date(goal.createdAt).getTime())) * 100
+      const expectedProgress = daysRemaining > 0
+        ? ((new Date().getTime() - new Date(goal.createdAt).getTime()) /
+          (targetDate.getTime() - new Date(goal.createdAt).getTime())) * 100
         : 100;
       const isOnTrack = progressPercentage >= expectedProgress * 0.9; // 90% of expected progress
 

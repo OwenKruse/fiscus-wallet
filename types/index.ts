@@ -1007,3 +1007,44 @@ export const SYNC_FREQUENCY_OPTIONS: { value: SyncFrequency; label: string; desc
   { value: 'hourly', label: 'Hourly', description: 'Sync every hour' },
   { value: 'daily', label: 'Daily', description: 'Sync once per day' },
 ];
+
+// Search API Types
+export interface SearchRequest {
+  query: string;
+  categories?: ('transactions' | 'goals' | 'pages')[];
+  limit?: number;
+}
+
+export interface TransactionSearchResult {
+  id: string;
+  name: string;
+  amount: number;
+  date: string;
+  accountName: string;
+  category: string[];
+}
+
+export interface GoalSearchResult {
+  id: string;
+  title: string;
+  description?: string;
+  targetAmount: number;
+  currentAmount: number;
+  progress: number;
+  status: string;
+}
+
+export interface PageSearchResult {
+  id: string;
+  name: string;
+  description: string;
+  path: string;
+  icon?: string;
+}
+
+export interface SearchResponse {
+  transactions: TransactionSearchResult[];
+  goals: GoalSearchResult[];
+  pages: PageSearchResult[];
+  totalResults: number;
+}

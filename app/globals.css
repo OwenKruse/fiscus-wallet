@@ -164,3 +164,29 @@
     text-wrap: balance;
   }
 }
+
+/* Mobile chart responsiveness */
+@layer components {
+  /* Ensure charts don't cause horizontal scrolling on mobile */
+  .recharts-responsive-container {
+    @apply min-w-0;
+  }
+  
+  /* Prevent chart overflow on small screens */
+  @media (max-width: 640px) {
+    .recharts-wrapper {
+      @apply min-w-0 max-w-full;
+    }
+    
+    /* Adjust chart text size on mobile */
+    .recharts-text {
+      font-size: 10px !important;
+    }
+    
+    /* Ensure pie chart labels are readable on mobile */
+    .recharts-pie-label-text {
+      font-size: 10px !important;
+      font-weight: 600 !important;
+    }
+  }
+}

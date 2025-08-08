@@ -14,6 +14,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { useIsMobile } from "@/hooks/use-mobile"
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { DashboardLayout } from "@/components/dashboard-layout"
+import { DashboardHeader } from "@/components/dashboard-header"
 import { PlaidLinkButton } from "@/components/plaid-link-button"
 import { useTransactions, useAccounts, useSync } from "@/hooks/use-api"
 import { useToast } from "@/hooks/use-toast"
@@ -304,32 +305,24 @@ export default function TransactionsPage() {
       <DashboardLayout>
         <SidebarInset className="flex flex-col h-full w-full">
         {/* Header */}
-        <header className="bg-white border-b px-6 py-4 ">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger className="-ml-1" />
-              <h1 className="text-xl font-semibold">Transactions</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleRefresh}
-                disabled={isSyncing}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-                {isSyncing ? 'Syncing...' : 'Refresh'}
-              </Button>
-              <PlaidLinkButton 
-                onSuccess={handlePlaidSuccess}
-                variant="default"
-                size="sm"
-              >
-                Connect Bank
-              </PlaidLinkButton>
-            </div>
-          </div>
-        </header>
+        <DashboardHeader title="Transactions">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRefresh}
+            disabled={isSyncing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+            {isSyncing ? 'Syncing...' : 'Refresh'}
+          </Button>
+          <PlaidLinkButton 
+            onSuccess={handlePlaidSuccess}
+            variant="default"
+            size="sm"
+          >
+            Connect Bank
+          </PlaidLinkButton>
+        </DashboardHeader>
 
         <div className="flex-1 p-6 bg-gray-50 overflow-auto">
           {/* Filters and Search */}

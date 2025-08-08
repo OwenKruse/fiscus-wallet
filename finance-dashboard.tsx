@@ -4,6 +4,7 @@ import React from "react"
 
 import { useState } from "react"
 import { ArrowDown, ArrowUp, Bell, Plus, Search, TrendingUp, User, RefreshCw, Link } from "lucide-react"
+import { DashboardHeader } from "@/components/dashboard-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -33,7 +34,7 @@ export default function FinanceDashboard() {
   // Parse date range for API calls
   const parseDateRange = (range: string) => {
     if (!range) return { startDate: undefined, endDate: undefined }
-    
+
     try {
       // Handle single date format
       if (!range.includes(' - ')) {
@@ -45,12 +46,12 @@ export default function FinanceDashboard() {
           }
         }
       }
-      
+
       // Handle date range format "DD MMM YYYY - DD MMM YYYY"
       const [startStr, endStr] = range.split(' - ')
       const startDate = new Date(startStr)
       const endDate = new Date(endStr)
-      
+
       if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
         return {
           startDate: startDate.toISOString().split('T')[0],
@@ -60,7 +61,7 @@ export default function FinanceDashboard() {
     } catch (error) {
       console.error('Error parsing date range:', error)
     }
-    
+
     return { startDate: undefined, endDate: undefined }
   }
 
@@ -68,10 +69,10 @@ export default function FinanceDashboard() {
 
   // API hooks
   const { accounts, isLoading: accountsLoading, refreshAccounts } = useAccounts()
-  const { transactions, isLoading: transactionsLoading, updateFilters } = useTransactions({ 
+  const { transactions, isLoading: transactionsLoading, updateFilters } = useTransactions({
     startDate,
     endDate,
-    limit: 100 
+    limit: 100
   })
   const { performSync, isSyncing } = useSync()
 
@@ -273,46 +274,17 @@ export default function FinanceDashboard() {
     <>
       <SidebarInset>
         {/* Header */}
-        <header className="bg-white border-b px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger className="-ml-1" />
-              <h1 className="text-xl font-semibold">Overview</h1>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="relative hidden md:block">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input placeholder="Search..." className="pl-10 w-64" />
-                <kbd className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 bg-gray-100 px-1 rounded">
-                  ⌘K
-                </kbd>
-              </div>
-
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                  1
-                </span>
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={isSyncing}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-                {isSyncing ? 'Syncing...' : 'Refresh'}
-              </Button>
-
-              <Button variant="ghost" size="icon">
-                <User className="h-5 w-5" />
-              </Button>
-
-            </div>
-          </div>
-        </header>
+        <DashboardHeader title="Overview">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isSyncing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+            
+          </Button>
+        </DashboardHeader>
 
         {/* Main Content */}
         <div className="p-6">
@@ -414,8 +386,11 @@ export default function FinanceDashboard() {
                     <span className="text-sm text-gray-500">
                       {accounts.length} account{accounts.length !== 1 ? 's' : ''}
                     </span>
-                    <Button variant="ghost" size="icon">
-                      <ArrowUp className="h-4 w-4" />
+
+                    <Button asChild variant="ghost" size="icon">
+                      <NextLink href={'/settings#accounts'} >
+                        <ArrowUp className="h-4 w-4" />
+                      </NextLink>
                     </Button>
                   </div>
                 </CardHeader>
@@ -617,7 +592,7 @@ export default function FinanceDashboard() {
             <div className="space-y-6">
               {/* Primary Goal Widget */}
               <PrimaryGoalWidget />
-              
+
               {/* Monthly Expenses */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
@@ -625,8 +600,10 @@ export default function FinanceDashboard() {
                     <CardTitle>Monthly Expenses</CardTitle>
                     <p className="text-sm text-gray-600">Last 6 months</p>
                   </div>
-                  <Button variant="ghost" className="text-sm">
-                    View Report
+                  <Button asChild variant="ghost" className="text-sm">
+                    <NextLink href={'/analytics#spending'}>
+                      View Report
+                    </NextLink>
                   </Button>
                 </CardHeader>
                 <CardContent>
@@ -699,9 +676,7 @@ export default function FinanceDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Expense Summary</CardTitle>
-                  <Button variant="ghost" size="icon">
-                    <ArrowUp className="h-4 w-4" />
-                  </Button>
+              
                 </CardHeader>
                 <CardContent>
                   <div className="text-xs text-gray-600 mb-4">
@@ -775,8 +750,11 @@ export default function FinanceDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Income vs Expenses</CardTitle>
-                  <Button variant="ghost" className="text-sm">
+                  <Button asChild variant="ghost" className="text-sm">
+                    <NextLink href={'/analytics#income'}>
                     View Details
+
+                    </NextLink>
                   </Button>
                 </CardHeader>
                 <CardContent>

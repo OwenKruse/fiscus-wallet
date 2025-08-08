@@ -40,6 +40,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { AppSidebar } from "@/components/app-sidebar"
 import CalendarComponent from "@/components/calandar-date-range"
 import { DashboardLayout } from "@/components/dashboard-layout"
+import { DashboardHeader } from "@/components/dashboard-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useGoals, useAccounts, usePrimaryGoal, useGoal } from "@/hooks/use-api"
@@ -589,32 +590,7 @@ export default function GoalsPage() {
         <DashboardLayout>
             <SidebarInset className="flex flex-col h-full">
                 {/* Header */}
-                <header className="bg-white border-b px-6 py-4 flex-shrink-0">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <SidebarTrigger className="-ml-1" />
-                            <h1 className="text-xl font-semibold">Financial Goals</h1>
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                            <div className="relative hidden md:block">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                                <Input placeholder="Search goals..." className="pl-10 w-64" />
-                            </div>
-
-                            <Button variant="ghost" size="icon" className="relative">
-                                <Bell className="h-5 w-5" />
-                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                                    1
-                                </span>
-                            </Button>
-
-
-
-                            <CalendarComponent dateRange={dateRange} onDateRangeChange={setDateRange} />
-                        </div>
-                    </div>
-                </header>
+                <DashboardHeader title="Financial Goals" />
 
                 {/* Main Content */}
                 <div className="flex-1 p-6 bg-gray-50 overflow-auto">

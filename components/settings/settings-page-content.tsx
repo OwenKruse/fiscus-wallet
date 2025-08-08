@@ -1,17 +1,39 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, User, Bell, Monitor, Shield, CreditCard } from 'lucide-react';
+import { AlertCircle, User, Bell, Monitor, Shield, CreditCard, ArrowLeft } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { ProfileForm, ProfilePictureUpload, EmailChangeForm, NotificationSettings, DisplaySettings, PrivacySettings, AccountsSettings } from '@/components/settings';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export function SettingsPageContent() {
   const { settings, isLoading, error } = useSettings();
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState('profile');
+
+  // Read hash from URL on mount and set active tab
+  useEffect(() => {
+    const hash = window.location.hash.slice(1); // Remove the # symbol
+    const validTabs = ['profile', 'notifications', 'display', 'privacy', 'accounts'];
+    
+    if (hash && validTabs.includes(hash)) {
+      setActiveTab(hash);
+    }
+  }, []);
+
+  // Handle tab change and update URL hash
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    // Update URL hash without triggering navigation
+    window.history.replaceState(null, '', `#${value}`);
+  };
 
   if (isLoading) {
     return (
@@ -44,16 +66,23 @@ export function SettingsPageContent() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">
-          Manage your account settings and preferences.
-        </p>
+      <div className="flex items-center gap-4 mb-6">
+        <Button asChild variant="ghost" size="icon">
+          <Link href="/">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        </Button>
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+          <p className="text-muted-foreground">
+            Manage your account settings and preferences.
+          </p>
+        </div>
       </div>
       
       <Separator />
       
-      <Tabs defaultValue="profile" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:grid-cols-5">
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />

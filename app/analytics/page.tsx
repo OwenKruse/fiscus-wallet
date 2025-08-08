@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
     ArrowDown,
     ArrowUp,
@@ -44,6 +44,7 @@ import {
 import CalendarComponent from "@/components/calandar-date-range"
 import { AppSidebar } from "@/components/app-sidebar"
 import { DashboardLayout } from "@/components/dashboard-layout"
+import { DashboardHeader } from "@/components/dashboard-header"
 import { OnboardingGuard } from "@/components/onboarding/onboarding-guard"
 import { useTransactions, useAccounts, useSync } from "@/hooks/use-api"
 import { useMemo } from "react"
@@ -51,6 +52,24 @@ import { useMemo } from "react"
 export default function AnalyticsPage() {
     const [dateRange, setDateRange] = useState("")
     const [timeframe, setTimeframe] = useState("1year")
+    const [activeTab, setActiveTab] = useState("overview")
+
+    // Read hash from URL on mount and set active tab
+    useEffect(() => {
+        const hash = window.location.hash.slice(1); // Remove the # symbol
+        const validTabs = ['overview', 'spending', 'income'];
+
+        if (hash && validTabs.includes(hash)) {
+            setActiveTab(hash);
+        }
+    }, []);
+
+    // Handle tab change and update URL hash
+    const handleTabChange = (value: string) => {
+        setActiveTab(value);
+        // Update URL hash without triggering navigation
+        window.history.replaceState(null, '', `#${value}`);
+    };
 
     // Parse date range for API calls
     const parseDateRange = (range: string) => {
@@ -511,46 +530,21 @@ export default function AnalyticsPage() {
         <DashboardLayout>
             <SidebarInset className="flex flex-col h-full">
                 {/* Header */}
-                <header className="bg-white border-b px-6 py-4 flex-shrink-0">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <SidebarTrigger className="-ml-1" />
-                            <h1 className="text-xl font-semibold">Analytics</h1>
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                            <div className="relative hidden md:block">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                                <Input placeholder="Search..." className="pl-10 w-64" />
-                            </div>
-
-
-                            <Button variant="ghost" size="icon" className="relative">
-                                <Bell className="h-5 w-5" />
-                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                                    1
-                                </span>
-                            </Button>
-
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleRefresh}
-                                disabled={isSyncing}
-                            >
-                                <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-                                {isSyncing ? 'Syncing...' : 'Refresh'}
-                            </Button>
-
-                           
-
-                            <CalendarComponent dateRange={dateRange} onDateRangeChange={handleDateRangeChange} />
-                        </div>
-                    </div>
-                </header>
+                <DashboardHeader title="Analytics">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRefresh}
+                        disabled={isSyncing}
+                    >
+                        <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                        {isSyncing ? 'Syncing...' : 'Refresh'}
+                    </Button>
+                    <CalendarComponent dateRange={dateRange} onDateRangeChange={handleDateRangeChange} />
+                </DashboardHeader>
 
                 {/* Main Content */}
-                <div className="flex-1 p-6 bg-gray-50 overflow-auto">
+                <div className="flex-1 p-4 sm:p-6 bg-gray-50 overflow-auto">
                     {/* Key Metrics */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                         <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0">
@@ -650,7 +644,7 @@ export default function AnalyticsPage() {
                         </Card>
                     </div>
 
-                    <Tabs defaultValue="overview" className="space-y-6">
+                    <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
                         <TabsList className="grid w-full grid-cols-3 ">
                             <TabsTrigger value="overview">Overview</TabsTrigger>
                             <TabsTrigger value="spending">Spending</TabsTrigger>
@@ -688,7 +682,6 @@ export default function AnalyticsPage() {
                                             <p className="text-sm mb-4">Connect your bank accounts to see detailed analytics</p>
                                             <Button onClick={handleRefresh} disabled={isSyncing}>
                                                 <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-                                                {isSyncing ? 'Syncing...' : 'Sync Data'}
                                             </Button>
                                         </div>
                                     </CardContent>
@@ -697,12 +690,12 @@ export default function AnalyticsPage() {
 
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {/* Income vs Expenses */}
-                                <Card className="shadow-lg">
+                                <Card className="shadow-lg overflow-hidden">
                                     <CardHeader className="pb-4">
                                         <CardTitle className="text-lg font-semibold">Income vs Expenses</CardTitle>
                                         <p className="text-sm text-gray-600">Monthly comparison over time</p>
                                     </CardHeader>
-                                    <CardContent>
+                                    <CardContent className="p-4 sm:p-6">
                                         <ChartContainer
                                             config={{
                                                 income: {
@@ -714,10 +707,10 @@ export default function AnalyticsPage() {
                                                     color: "#ef4444",
                                                 },
                                             }}
-                                            className="h-[300px]"
+                                            className="h-[250px] sm:h-[300px] w-full"
                                         >
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart data={monthlyData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                                <BarChart data={monthlyData} margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
                                                     <XAxis
                                                         dataKey="month"
                                                         axisLine={false}
@@ -744,12 +737,12 @@ export default function AnalyticsPage() {
                                 </Card>
 
                                 {/* Balance Over Time */}
-                                <Card className="shadow-lg">
+                                <Card className="shadow-lg overflow-hidden">
                                     <CardHeader className="pb-4">
                                         <CardTitle className="text-lg font-semibold">Net Worth Trend</CardTitle>
                                         <p className="text-sm text-gray-600">Total assets minus debts over time</p>
                                     </CardHeader>
-                                    <CardContent>
+                                    <CardContent className="p-4 sm:p-6">
                                         <ChartContainer
                                             config={{
                                                 balance: {
@@ -757,10 +750,10 @@ export default function AnalyticsPage() {
                                                     color: "#3b82f6",
                                                 },
                                             }}
-                                            className="h-[300px]"
+                                            className="h-[250px] sm:h-[300px] w-full"
                                         >
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <AreaChart data={balanceOverTime} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                                <AreaChart data={balanceOverTime} margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
                                                     <defs>
                                                         <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
                                                             <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
@@ -798,12 +791,12 @@ export default function AnalyticsPage() {
                             </div>
 
                             {/* Savings Progress */}
-                            <Card className="shadow-lg">
+                            <Card className="shadow-lg overflow-hidden">
                                 <CardHeader className="pb-4">
                                     <CardTitle className="text-lg font-semibold">Monthly Savings</CardTitle>
                                     <p className="text-sm text-gray-600">Savings accumulation over time</p>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="p-4 sm:p-6">
                                     <ChartContainer
                                         config={{
                                             savings: {
@@ -811,10 +804,10 @@ export default function AnalyticsPage() {
                                                 color: "#10b981",
                                             },
                                         }}
-                                        className="h-[250px]"
+                                        className="h-[200px] sm:h-[250px] w-full"
                                     >
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <LineChart data={monthlyData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                            <LineChart data={monthlyData} margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
                                                 <XAxis
                                                     dataKey="month"
                                                     axisLine={false}
@@ -849,12 +842,12 @@ export default function AnalyticsPage() {
                         <TabsContent value="spending" className="space-y-6">
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {/* Spending by Category */}
-                                <Card className="shadow-lg">
+                                <Card className="shadow-lg overflow-hidden">
                                     <CardHeader className="pb-4">
                                         <CardTitle className="text-lg font-semibold">Spending by Category</CardTitle>
                                         <p className="text-sm text-gray-600">This month's expense breakdown</p>
                                     </CardHeader>
-                                    <CardContent>
+                                    <CardContent className="p-4 sm:p-6">
                                         <ChartContainer
                                             config={{
                                                 food: { label: "Food & Dining", color: "#3b82f6" },
@@ -864,7 +857,7 @@ export default function AnalyticsPage() {
                                                 bills: { label: "Bills & Utilities", color: "#8b5cf6" },
                                                 healthcare: { label: "Healthcare", color: "#06b6d4" },
                                             }}
-                                            className="h-[300px]"
+                                            className="h-[250px] sm:h-[300px] w-full"
                                         >
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <RechartsPieChart>
@@ -874,7 +867,7 @@ export default function AnalyticsPage() {
                                                         cy="50%"
                                                         labelLine={false}
                                                         label={renderCustomizedLabel}
-                                                        outerRadius={100}
+                                                        outerRadius={80}
                                                         fill="#8884d8"
                                                         dataKey="value"
                                                     >
@@ -889,12 +882,12 @@ export default function AnalyticsPage() {
                                                 </RechartsPieChart>
                                             </ResponsiveContainer>
                                         </ChartContainer>
-                                        <div className="grid grid-cols-2 gap-3 mt-6">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
                                             {categoryDataWithColors.map((item, index) => (
                                                 <div key={index} className="flex items-center gap-3 p-2 rounded-lg bg-gray-50">
-                                                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: item.color }} />
-                                                    <div className="flex-1">
-                                                        <div className="text-sm font-medium">{item.name}</div>
+                                                    <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-sm font-medium truncate">{item.name}</div>
                                                         <div className="text-xs text-gray-500">${item.value.toLocaleString()}</div>
                                                     </div>
                                                 </div>
@@ -904,12 +897,12 @@ export default function AnalyticsPage() {
                                 </Card>
 
                                 {/* Daily Spending Pattern */}
-                                <Card className="shadow-lg">
+                                <Card className="shadow-lg overflow-hidden">
                                     <CardHeader className="pb-4">
                                         <CardTitle className="text-lg font-semibold">Daily Spending Pattern</CardTitle>
                                         <p className="text-sm text-gray-600">Average spending by day of week</p>
                                     </CardHeader>
-                                    <CardContent>
+                                    <CardContent className="p-4 sm:p-6">
                                         <ChartContainer
                                             config={{
                                                 amount: {
@@ -917,10 +910,10 @@ export default function AnalyticsPage() {
                                                     color: "#8b5cf6",
                                                 },
                                             }}
-                                            className="h-[300px]"
+                                            className="h-[250px] sm:h-[300px] w-full"
                                         >
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart data={dailySpendingData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                                <BarChart data={dailySpendingData} margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
                                                     <defs>
                                                         <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
                                                             <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
@@ -990,12 +983,12 @@ export default function AnalyticsPage() {
                         <TabsContent value="income" className="space-y-6">
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {/* Income Trend */}
-                                <Card className="shadow-lg">
+                                <Card className="shadow-lg overflow-hidden">
                                     <CardHeader className="pb-4">
                                         <CardTitle className="text-lg font-semibold">Income Trend</CardTitle>
                                         <p className="text-sm text-gray-600">Monthly income over time</p>
                                     </CardHeader>
-                                    <CardContent>
+                                    <CardContent className="p-4 sm:p-6">
                                         <ChartContainer
                                             config={{
                                                 income: {
@@ -1003,10 +996,10 @@ export default function AnalyticsPage() {
                                                     color: "#10b981",
                                                 },
                                             }}
-                                            className="h-[300px]"
+                                            className="h-[250px] sm:h-[300px] w-full"
                                         >
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <AreaChart data={monthlyData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                                <AreaChart data={monthlyData} margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
                                                     <defs>
                                                         <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
                                                             <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
@@ -1043,12 +1036,12 @@ export default function AnalyticsPage() {
                                 </Card>
 
                                 {/* Income Sources */}
-                                <Card className="shadow-lg">
+                                <Card className="shadow-lg overflow-hidden">
                                     <CardHeader className="pb-4">
                                         <CardTitle className="text-lg font-semibold">Income Sources</CardTitle>
                                         <p className="text-sm text-gray-600">Breakdown by companies and income sources</p>
                                     </CardHeader>
-                                    <CardContent>
+                                    <CardContent className="p-4 sm:p-6">
                                         {incomeSourceData.length > 0 && incomeSourceData[0].name !== "No Income Data" ? (
                                             <ChartContainer
                                                 config={{
@@ -1060,7 +1053,7 @@ export default function AnalyticsPage() {
                                                     company6: { label: "Company 6", color: "#06b6d4" },
                                                     other: { label: "Other Companies", color: "#9ca3af" },
                                                 }}
-                                                className="h-[250px]"
+                                                className="h-[200px] sm:h-[250px] w-full"
                                             >
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <RechartsPieChart>
@@ -1068,8 +1061,8 @@ export default function AnalyticsPage() {
                                                             data={incomeSourceData}
                                                             cx="50%"
                                                             cy="50%"
-                                                            innerRadius={40}
-                                                            outerRadius={80}
+                                                            innerRadius={30}
+                                                            outerRadius={70}
                                                             paddingAngle={5}
                                                             dataKey="value"
                                                         >
@@ -1085,7 +1078,7 @@ export default function AnalyticsPage() {
                                                 </ResponsiveContainer>
                                             </ChartContainer>
                                         ) : (
-                                            <div className="h-[250px] flex items-center justify-center text-gray-500">
+                                            <div className="h-[200px] sm:h-[250px] flex items-center justify-center text-gray-500">
                                                 <div className="text-center">
                                                     <DollarSign className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                                                     <p className="text-sm">No income data available</p>
