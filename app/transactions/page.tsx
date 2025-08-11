@@ -308,23 +308,22 @@ export default function TransactionsPage() {
         <DashboardHeader title="Transactions">
           <Button 
             variant="outline" 
-            size="sm" 
+            size="icon" 
             onClick={handleRefresh}
             disabled={isSyncing}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-            {isSyncing ? 'Syncing...' : 'Refresh'}
+            <RefreshCw className={`h-4 w-4  ${isSyncing ? 'animate-spin' : ''}`} />
           </Button>
           <PlaidLinkButton 
             onSuccess={handlePlaidSuccess}
             variant="default"
             size="sm"
           >
-            Connect Bank
+            Connect
           </PlaidLinkButton>
         </DashboardHeader>
 
-        <div className="flex-1 p-6 bg-gray-50 overflow-auto">
+        <div className="flex-1 p-4 sm:p-6 bg-gray-50 overflow-auto">
           {/* Filters and Search */}
           <Card className="mb-6 w-full">
             <CardHeader>
@@ -420,7 +419,7 @@ export default function TransactionsPage() {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                <div className="space-y-2 max-h-[600px] overflow-y-auto overflow-x-hidden">
                   {sortedTransactions.map((transaction) => {
                     const categoryColor = getCategoryColor(transaction.category)
                     const isIncome = transaction.amount < 0 // In Plaid: negative = income, positive = expense
@@ -428,20 +427,20 @@ export default function TransactionsPage() {
                     return (
                       <div
                         key={transaction.id}
-                        className="flex items-center justify-between p-4 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer group border border-transparent hover:border-gray-200"
+                        className="flex items-center justify-between p-3 sm:p-4 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer group border border-transparent hover:border-gray-200"
                         onClick={() => handleTransactionClick(transaction)}
                       >
-                        <div className="flex items-center gap-4">
-                          <Avatar className="h-10 w-10 group-hover:scale-105 transition-transform">
+                        <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                          <Avatar className="h-10 w-10 group-hover:scale-105 transition-transform flex-shrink-0">
                             <AvatarFallback className={`${categoryColor} text-white`}>
                               {transaction.name.charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                          <div>
-                            <div className="font-medium group-hover:text-primary transition-colors">
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium group-hover:text-primary transition-colors truncate">
                               {transaction.name}
                             </div>
-                            <div className="text-sm text-gray-500">
+                            <div className="text-sm text-gray-500 truncate">
                               {transaction.category[0] || 'Other'} • {transaction.accountName}
                             </div>
                             <div className="text-xs text-gray-400">
@@ -449,11 +448,11 @@ export default function TransactionsPage() {
                             </div>
                           </div>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right flex-shrink-0">
                           <div className={`text-lg font-bold ${isIncome ? "text-green-600" : "text-red-600"}`}>
                             {isIncome ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)}
                           </div>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center justify-end gap-1">
                             <Badge variant={transaction.pending ? "secondary" : "default"} className="text-xs">
                               {transaction.pending ? "Pending" : "Completed"}
                             </Badge>

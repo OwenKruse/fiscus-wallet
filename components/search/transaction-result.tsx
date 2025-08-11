@@ -31,20 +31,20 @@ export function TransactionResult({ transaction, onSelect, isHighlighted = false
           </div>
         </div>
         <div className="flex flex-col gap-1 flex-1 min-w-0">
-          <div className="flex items-center justify-between">
-            <span className="font-medium truncate">{transaction.name}</span>
-            <span className={`text-sm font-medium ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-medium truncate flex-1">{transaction.name}</span>
+            <span className={`text-sm font-medium flex-shrink-0 ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
               {isNegative ? '-' : '+'}${displayAmount.toFixed(2)}
             </span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="truncate">{transaction.accountName}</span>
-            <span>•</span>
-            <span>{new Date(transaction.date).toLocaleDateString()}</span>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
+            <span className="truncate flex-shrink">{transaction.accountName}</span>
+            <span className="flex-shrink-0">•</span>
+            <span className="flex-shrink-0">{new Date(transaction.date).toLocaleDateString()}</span>
             {transaction.category.length > 0 && (
               <>
-                <span>•</span>
-                <span className="truncate">{transaction.category[0]}</span>
+                <span className="flex-shrink-0">•</span>
+                <span className="truncate flex-shrink">{transaction.category[0]}</span>
               </>
             )}
           </div>

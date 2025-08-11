@@ -534,23 +534,23 @@ export default function FinanceDashboard() {
                             className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer group"
                             onClick={() => handleTransactionClick(transaction.id)}
                           >
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8 group-hover:scale-105 transition-transform">
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <Avatar className="h-8 w-8 group-hover:scale-105 transition-transform flex-shrink-0">
                                 <AvatarFallback className={`${categoryColor} text-white text-xs`}>
                                   {transaction.name.charAt(0).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
-                              <div>
-                                <div className="font-medium text-sm group-hover:text-primary transition-colors">
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium text-sm group-hover:text-primary transition-colors truncate">
                                   {transaction.name}
                                 </div>
-                                <div className="text-xs text-gray-500">
+                                <div className="text-xs text-gray-500 truncate">
                                   {new Date(transaction.date).toLocaleDateString()} • {transaction.accountName}
                                 </div>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <div className="text-sm font-medium">
+                            <div className="text-right flex-shrink-0">
+                              <div className="text-sm font-medium truncate">
                                 {formatCategoryName(transaction.category)}
                               </div>
                               <div
