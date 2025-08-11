@@ -599,6 +599,25 @@ export const goalsApi = {
     }
   },
 
+  // Sync progress for all user goals
+  async syncAllGoalsProgress(): Promise<{ goalsUpdated: number; errors: string[] }> {
+    const response = await apiRequest<ApiResponse<{ goalsUpdated: number; errors: string[]; timestamp: string }>>('/api/goals/sync', {
+      method: 'POST',
+    });
+
+    if (!response.success) {
+      throw new ApiError(
+        response.error?.message || 'Failed to sync goals progress',
+        response.error?.code || 'SYNC_GOALS_FAILED'
+      );
+    }
+
+    return {
+      goalsUpdated: response.data.goalsUpdated,
+      errors: response.data.errors
+    };
+  },
+
   // Set goal as primary
   async setPrimaryGoal(goalId: string): Promise<void> {
     const response = await apiRequest<ApiResponse>(`/api/goals/${goalId}/primary`, {

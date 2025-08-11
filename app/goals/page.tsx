@@ -44,7 +44,7 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useGoals, useAccounts, usePrimaryGoal, useGoal } from "@/hooks/use-api"
+import { useGoals, useAccounts, usePrimaryGoal, useGoal, useGoalsSync } from "@/hooks/use-api"
 import { Goal, GoalsFilters } from "@/types"
 import { useToast } from "@/hooks/use-toast"
 
@@ -163,6 +163,13 @@ export default function GoalsPage() {
         addProgress,
         addProgressState
     } = useGoal(selectedGoal?.id || '')
+
+    // Goals sync hook for manual progress sync
+    const {
+        syncAllGoals,
+        loading: syncLoading,
+        isLoading: isSyncLoading
+    } = useGoalsSync()
 
     // Handle URL parameter for focusing on specific goal from search
     useEffect(() => {
@@ -614,25 +621,49 @@ export default function GoalsPage() {
         }
     }
 
+    // Handle sync all goals progress
+    const handleSyncAllGoalsProgress = async () => {
+        try {
+            const result = await syncAllGoals()
+            
+            toast({
+                title: "Goals progress synced",
+                description: `Successfully updated progress for ${result.goalsUpdated} goals.`,
+            })
+
+            // Refresh goals to show updated progress
+            await refreshGoals()
+        } catch (error) {
+            console.error('Failed to sync goals progress:', error)
+            toast({
+                title: "Error",
+                description: "Failed to sync goals progress. Please try again.",
+                variant: "destructive",
+            })
+        }
+    }
+
     return (
         <DashboardLayout>
             <SidebarInset className="flex flex-col h-full">
                 {/* Header */}
-                <DashboardHeader title="Financial Goals" />
+                <DashboardHeader title="Financial Goals" >
+                    
+                </DashboardHeader>
 
                 {/* Main Content */}
                 <div className="flex-1 p-6 bg-gray-50 overflow-auto">
                     <div className="flex items-center justify-between space-y-2 mb-6">
-                        <Dialog open={isAddGoalOpen} onOpenChange={(open) => {
-                            setIsAddGoalOpen(open)
-                            if (!open) resetForm()
-                        }}>
-                            <DialogTrigger asChild>
-                                <Button className="justify-end ml-auto">
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Add Goal
-                                </Button>
-                            </DialogTrigger>
+                            <Dialog open={isAddGoalOpen} onOpenChange={(open) => {
+                                setIsAddGoalOpen(open)
+                                if (!open) resetForm()
+                            }}>
+                                <DialogTrigger asChild>
+                                    <Button>
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Add Goal
+                                    </Button>
+                                </DialogTrigger>
                             <DialogContent className="sm:max-w-[425px] overflow-y-scroll max-h-screen">
                                 <DialogHeader>
                                     <DialogTitle>Add New Goal</DialogTitle>
@@ -1580,7 +1611,8 @@ export default function GoalsPage() {
                                                 <Button
                                                     className="flex-1"
                                                     onClick={() => handleRecalculateProgress(selectedGoal.id)}
-                                                    disabled={isRecalculatingProgress}
+                                                    disabled={isRecalculatingProgress || selectedGoal.trackingMethod === 'manual'}
+                                                    title={selectedGoal.trackingMethod === 'manual' ? 'This goal uses manual tracking' : 'Recalculate progress from your latest financial data'}
                                                 >
                                                     <TrendingUp className="mr-2 h-4 w-4" />
                                                     {isRecalculatingProgress ? 'Calculating...' : 'Recalculate'}

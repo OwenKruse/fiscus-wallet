@@ -590,6 +590,29 @@ export function useGoals(initialFilters?: import('../types').GoalsFilters) {
   };
 }
 
+// Hook for syncing all goals progress
+export function useGoalsSync() {
+  const syncAllGoalsProgress = useApiOperation(goalsApi.syncAllGoalsProgress);
+
+  const handleSyncAllGoals = useCallback(async () => {
+    try {
+      const result = await syncAllGoalsProgress.execute();
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }, [syncAllGoalsProgress]);
+
+  return {
+    syncAllGoals: handleSyncAllGoals,
+    loading: syncAllGoalsProgress.loading,
+    error: syncAllGoalsProgress.error,
+    isLoading: syncAllGoalsProgress.isLoading,
+    isSuccess: syncAllGoalsProgress.isSuccess,
+    isError: syncAllGoalsProgress.isError,
+  };
+}
+
 export function useGoal(goalId: string) {
   const [goal, setGoal] = useState<import('../types').Goal | null>(null);
   const [progressHistory, setProgressHistory] = useState<import('../types').GoalProgress[]>([]);

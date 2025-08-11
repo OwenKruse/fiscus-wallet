@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDataSyncService } from '../../../lib/sync/data-sync-service';
 import { withApiAuth, withApiLogging } from '../../../lib/auth/api-middleware';
+import { withAppInitialization } from '../../../lib/middleware/app-init-middleware';
 import { SyncRequest, SyncResponse } from '../../../types';
 
 // Create error response
@@ -71,6 +72,14 @@ async function syncDataHandler(
       forceRefresh: syncRequest.forceRefresh || false,
       priority: 'high', // Manual sync gets high priority
     });
+
+    // Also trigger goal progress calculation after sync
+    try {
+      await syncService.calculateGoalProgress(user.id);
+    } catch (error) {
+      console.warn('Goal progress calculation failed during manual sync:', error);
+      // Don't fail the entire sync if goal calculation fails
+    }
 
     // Get initial job status
     const jobStatus = syncService.getSyncJobStatus(jobId);
@@ -158,12 +167,16 @@ async function getSyncStatusHandler(
 }
 
 // Apply middleware and export
-export const POST = withApiLogging(
-  withApiAuth(syncDataHandler, { requireAuth: true, requireTenant: false }),
-  'POST_SYNC'
+export const POST = withAppInitialization(
+  withApiLogging(
+    withApiAuth(syncDataHandler, { requireAuth: true, requireTenant: false }),
+    'POST_SYNC'
+  )
 );
 
-export const GET = withApiLogging(
-  withApiAuth(getSyncStatusHandler, { requireAuth: true, requireTenant: false }),
-  'GET_SYNC_STATUS'
+export const GET = withAppInitialization(
+  withApiLogging(
+    withApiAuth(getSyncStatusHandler, { requireAuth: true, requireTenant: false }),
+    'GET_SYNC_STATUS'
+  )
 ); 

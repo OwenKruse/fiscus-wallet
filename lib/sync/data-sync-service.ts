@@ -718,6 +718,18 @@ export class DataSyncService {
   }
 
   /**
+   * Format currency for logging
+   */
+  private formatCurrency(amount: number): string {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  }
+
+  /**
    * Calculates goal progress for a user after financial data sync
    * @param userId - The user ID
    * @returns Promise resolving to goal calculation results
@@ -813,7 +825,7 @@ export class DataSyncService {
           }
 
           goalsUpdated++;
-          console.log(`Updated goal ${goal.id} (${goal.title}) - new amount: ${result.currentAmount}`);
+          console.log(`✅ Updated goal "${goal.title}" (${goal.id}) - progress: ${this.formatCurrency(goal.currentAmount)} → ${this.formatCurrency(result.currentAmount)}`);
 
         } catch (error) {
           const errorMessage = `Failed to update goal ${result.goalId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
