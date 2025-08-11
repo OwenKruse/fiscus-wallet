@@ -35,7 +35,7 @@ export function OnboardingGuard({
 
   // Show loading while checking account status
   if (accountsLoading || !hasChecked) {
-    return fallback || <OnboardingLoadingFallback />
+    return <>{children}</>
   }
 
   // If there's an error, show the children anyway (let the app handle the error)
