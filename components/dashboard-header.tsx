@@ -19,7 +19,7 @@ export function DashboardHeader({ title, children }: DashboardHeaderProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <SidebarTrigger className="-ml-1" />
-          <h1 className="text-xl font-semibold">{title}</h1>
+          <h1 className="text-xl hidden md:block font-semibold">{title}</h1>
         </div>
 
         <div className="flex items-center gap-4">
