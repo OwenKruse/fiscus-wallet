@@ -3,7 +3,7 @@
 import React from "react"
 
 import { useState } from "react"
-import { ArrowDown, ArrowUp, Bell, Plus, Search, TrendingUp, User, RefreshCw, Link } from "lucide-react"
+import { ArrowDown, ArrowUp, Bell, Plus, Search, TrendingUp, User, RefreshCw, Link, CreditCard, Building2, Landmark } from "lucide-react"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -186,17 +186,79 @@ export default function FinanceDashboard() {
 
   // Helper function to get account icon based on type
   const getAccountIcon = (type: string, subtype: string) => {
+    // Credit accounts
+    if (type === 'credit') {
+      return CreditCard
+    }
+    
+    // Investment accounts
     if (type === 'investment' || subtype === 'brokerage' || subtype === '401k' || subtype === 'ira') {
       return PieChart
     }
-    if (type === 'depository' && subtype === 'savings') {
-      return Target
+    
+    // Loan accounts
+    if (type === 'loan') {
+      return Building2
     }
+    
+    // Depository accounts
+    if (type === 'depository') {
+      if (subtype === 'savings') {
+        return Target
+      }
+      if (subtype === 'checking') {
+        return Wallet
+      }
+      if (subtype === 'cd' || subtype === 'money market') {
+        return Landmark
+      }
+    }
+    
+    // Default fallback
     return Wallet
+  }
+
+  // Helper function to format account type for display
+  const formatAccountType = (type: string, subtype: string) => {
+    const typeMap: Record<string, string> = {
+      depository: 'Bank Account',
+      credit: 'Credit Card',
+      investment: 'Investment',
+      loan: 'Loan',
+    }
+
+    const subtypeMap: Record<string, string> = {
+      checking: 'Checking Account',
+      savings: 'Savings Account',
+      'money market': 'Money Market Account',
+      cd: 'Certificate of Deposit',
+      'credit card': 'Credit Card',
+      '401k': '401(k) Account',
+      ira: 'IRA Account',
+      brokerage: 'Brokerage Account',
+      mortgage: 'Mortgage',
+      'auto loan': 'Auto Loan',
+      'student loan': 'Student Loan',
+    }
+
+    const formattedSubtype = subtypeMap[subtype.toLowerCase()] || subtype
+    const formattedType = typeMap[type] || type
+
+    return formattedSubtype !== formattedType ? formattedSubtype : formattedType
   }
 
   // Helper function to get account color based on type
   const getAccountColor = (type: string, subtype: string) => {
+    // Credit accounts - red theme
+    if (type === 'credit') {
+      return {
+        color: "bg-red-500",
+        gradient: "from-red-50 to-red-100",
+        border: "border-red-200"
+      }
+    }
+    
+    // Investment accounts - purple theme
     if (type === 'investment' || subtype === 'brokerage' || subtype === '401k' || subtype === 'ira') {
       return {
         color: "bg-purple-500",
@@ -204,13 +266,42 @@ export default function FinanceDashboard() {
         border: "border-purple-200"
       }
     }
-    if (type === 'depository' && subtype === 'savings') {
+    
+    // Loan accounts - orange theme
+    if (type === 'loan') {
       return {
-        color: "bg-green-500",
-        gradient: "from-green-50 to-green-100",
-        border: "border-green-200"
+        color: "bg-orange-500",
+        gradient: "from-orange-50 to-orange-100",
+        border: "border-orange-200"
       }
     }
+    
+    // Depository accounts - different colors by subtype
+    if (type === 'depository') {
+      if (subtype === 'savings') {
+        return {
+          color: "bg-green-500",
+          gradient: "from-green-50 to-green-100",
+          border: "border-green-200"
+        }
+      }
+      if (subtype === 'checking') {
+        return {
+          color: "bg-blue-500",
+          gradient: "from-blue-50 to-blue-100",
+          border: "border-blue-200"
+        }
+      }
+      if (subtype === 'cd' || subtype === 'money market') {
+        return {
+          color: "bg-emerald-500",
+          gradient: "from-emerald-50 to-emerald-100",
+          border: "border-emerald-200"
+        }
+      }
+    }
+    
+    // Default fallback - blue theme
     return {
       color: "bg-blue-500",
       gradient: "from-blue-50 to-blue-100",
@@ -456,9 +547,22 @@ export default function FinanceDashboard() {
                                 </div>
                               </div>
                             </div>
-                            <span className="text-sm font-bold">
-                              ${account.type === 'credit' ? -Math.abs(account.balance.current) : account.balance.current}
-                            </span>
+                            <div className="text-right">
+                              <span className="text-sm font-bold">
+                                {account.type === 'credit' 
+                                  ? `$${Math.abs(account.balance.current).toLocaleString()}`
+                                  : `$${account.balance.current.toLocaleString()}`
+                                }
+                              </span>
+                              {account.type === 'credit' && (
+                                <div className="text-xs text-red-600">
+                                  {account.balance.limit 
+                                    ? `of $${account.balance.limit.toLocaleString()} limit`
+                                    : 'balance owed'
+                                  }
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )
                       })}
@@ -823,13 +927,28 @@ export default function FinanceDashboard() {
             <div className="space-y-6">
               {/* Account Balance */}
               <div className="text-center p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg">
-                <div className="text-sm text-gray-600 mb-1">Current Balance</div>
-                <div className="text-3xl font-bold text-gray-900">
-                  ${selectedAccount.type === 'credit' ? -Math.abs(selectedAccount.balance.current) : selectedAccount.balance.current}
+                <div className="text-sm text-gray-600 mb-1">
+                  {selectedAccount.type === 'credit' ? 'Current Balance Owed' : 'Current Balance'}
                 </div>
-                {selectedAccount.balance.available && (
+                <div className={`text-3xl font-bold ${selectedAccount.type === 'credit' ? 'text-red-600' : 'text-gray-900'}`}>
+                  ${selectedAccount.type === 'credit' 
+                    ? Math.abs(selectedAccount.balance.current).toLocaleString()
+                    : selectedAccount.balance.current.toLocaleString()
+                  }
+                </div>
+                {selectedAccount.type === 'credit' && selectedAccount.balance.limit && (
                   <div className="text-sm text-gray-500 mt-1">
-                    Available: ${selectedAccount.type === 'credit' ? -Math.abs(selectedAccount.balance.available) : selectedAccount.balance.available}
+                    Credit Limit: ${selectedAccount.balance.limit.toLocaleString()}
+                  </div>
+                )}
+                {selectedAccount.type === 'credit' && selectedAccount.balance.available && (
+                  <div className="text-sm text-green-600 mt-1">
+                    Available Credit: ${selectedAccount.balance.available.toLocaleString()}
+                  </div>
+                )}
+                {selectedAccount.type !== 'credit' && selectedAccount.balance.available && selectedAccount.balance.available !== selectedAccount.balance.current && (
+                  <div className="text-sm text-gray-500 mt-1">
+                    Available: ${selectedAccount.balance.available.toLocaleString()}
                   </div>
                 )}
               </div>
@@ -839,7 +958,7 @@ export default function FinanceDashboard() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <div className="text-sm text-gray-600">Account Type</div>
-                    <div className="font-medium capitalize">{selectedAccount.type} - {selectedAccount.subtype}</div>
+                    <div className="font-medium">{formatAccountType(selectedAccount.type, selectedAccount.subtype)}</div>
                   </div>
                   <div>
                     <div className="text-sm text-gray-600">Institution</div>
