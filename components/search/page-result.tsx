@@ -12,7 +12,7 @@ import {
   Navigation,
   ExternalLink
 } from 'lucide-react';
-import type { PageSearchResult } from '@/contexts/search-context';
+import type { PageSearchResult } from '@/types';
 
 interface PageResultProps {
   page: PageSearchResult;

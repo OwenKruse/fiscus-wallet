@@ -3,7 +3,7 @@
 import React from 'react';
 import { CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Loader2 } from 'lucide-react';
-import type { SearchResponse, TransactionSearchResult, GoalSearchResult, PageSearchResult } from '@/contexts/search-context';
+import type { SearchResponse, TransactionSearchResult, GoalSearchResult, PageSearchResult } from '@/types';
 import { SearchResultsGroup } from './search-results-group';
 import { TransactionResult } from './transaction-result';
 import { GoalResult } from './goal-result';
@@ -63,7 +63,7 @@ export function SearchResults({
         <CommandGroup heading="Recent Searches">
           {recentSearches.map((recentQuery, index) => (
             <CommandItem
-              key={index}
+              key={`recent-${recentQuery}-${index}`}
               value={recentQuery}
               onSelect={() => onRecentSearchSelect(recentQuery)}
               className={`cursor-pointer ${

@@ -3,7 +3,7 @@
 import React from 'react';
 import { CommandItem } from '@/components/ui/command';
 import { DollarSign } from 'lucide-react';
-import type { TransactionSearchResult } from '@/contexts/search-context';
+import type { TransactionSearchResult } from '@/types';
 
 interface TransactionResultProps {
   transaction: TransactionSearchResult;
@@ -17,8 +17,7 @@ export function TransactionResult({ transaction, onSelect, isHighlighted = false
   
   return (
     <CommandItem
-      key={transaction.id}
-      value={`transaction-${transaction.id}`}
+      value={`transaction-${transaction.id}-${transaction.name}`}
       onSelect={() => onSelect(transaction)}
       className={`cursor-pointer ${
         isHighlighted ? 'bg-accent text-accent-foreground' : ''

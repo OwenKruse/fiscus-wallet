@@ -4,7 +4,7 @@ import React from 'react';
 import { CommandItem } from '@/components/ui/command';
 import { Target, TrendingUp } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import type { GoalSearchResult } from '@/contexts/search-context';
+import type { GoalSearchResult } from '@/types';
 
 interface GoalResultProps {
   goal: GoalSearchResult;

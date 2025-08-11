@@ -3,7 +3,7 @@
 import { useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSearch as useSearchContext } from '@/contexts/search-context';
-import type { TransactionSearchResult, GoalSearchResult, PageSearchResult } from '@/contexts/search-context';
+import type { TransactionSearchResult, GoalSearchResult, PageSearchResult } from '@/types';
 
 export interface UseSearchOptions {
   autoSearch?: boolean;
@@ -26,7 +26,7 @@ export function useSearch(options: UseSearchOptions = {}) {
     } else if (searchContext.query.length < minQueryLength) {
       searchContext.clearResults();
     }
-  }, [searchContext.query, autoSearch, minQueryLength, searchContext]);
+  }, [searchContext.query, autoSearch, minQueryLength, searchContext.search, searchContext.clearResults]);
 
   // Handle result selection and navigation
   const handleResultSelect = useCallback((
@@ -53,7 +53,7 @@ export function useSearch(options: UseSearchOptions = {}) {
     
     // Clear search results after navigation
     searchContext.clearResults();
-  }, [router, searchContext]);
+  }, [router, searchContext.clearResults]);
 
   // Handle recent search selection
   const handleRecentSearchSelect = useCallback((recentQuery: string) => {
@@ -61,7 +61,7 @@ export function useSearch(options: UseSearchOptions = {}) {
     if (autoSearch) {
       searchContext.search(recentQuery);
     }
-  }, [searchContext, autoSearch]);
+  }, [searchContext.setQuery, searchContext.search, autoSearch]);
 
   // Perform manual search (useful when autoSearch is disabled)
   const performSearch = useCallback((query?: string) => {
@@ -69,13 +69,13 @@ export function useSearch(options: UseSearchOptions = {}) {
     if (searchQuery.length >= minQueryLength) {
       searchContext.search(searchQuery);
     }
-  }, [searchContext, minQueryLength]);
+  }, [searchContext.query, searchContext.search, minQueryLength]);
 
   // Reset search state
   const resetSearch = useCallback(() => {
     searchContext.setQuery('');
     searchContext.clearResults();
-  }, [searchContext]);
+  }, [searchContext.setQuery, searchContext.clearResults]);
 
   // Check if there are any results
   const hasResults = searchContext.results && searchContext.results.totalResults > 0;
