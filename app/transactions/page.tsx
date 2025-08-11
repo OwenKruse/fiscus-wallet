@@ -178,10 +178,12 @@ export default function TransactionsPage() {
   useEffect(() => {
     const transactionId = searchParams.get("id")
     const highlightId = searchParams.get("highlight")
+    const targetDate = searchParams.get("date")
     
     if (transactionId || highlightId) {
       const targetId = transactionId || highlightId
       const transaction = transactions.find((t) => t.id === targetId)
+      
       if (transaction) {
         setSelectedTransaction(transaction)
         setIsDetailOpen(true)
@@ -191,9 +193,20 @@ export default function TransactionsPage() {
           // Use replace to avoid adding to browser history
           router.replace("/transactions")
         }
+      } else if (highlightId && targetDate && hasMore && !transactionsLoading) {
+        // Transaction not found but we have a date - try to load more transactions
+        // Check if the target date is older than our oldest loaded transaction
+        const oldestTransaction = transactions[transactions.length - 1]
+        const targetDateObj = new Date(targetDate)
+        
+        if (!oldestTransaction || new Date(oldestTransaction.date) > targetDateObj) {
+          // Target transaction is likely in an unloaded page, load more
+          console.log('Target transaction not found, loading more transactions...')
+          loadMore()
+        }
       }
     }
-  }, [searchParams, transactions, router])
+  }, [searchParams, transactions, router, hasMore, transactionsLoading, loadMore])
 
   // Memoize filters to prevent unnecessary re-renders
   const currentFilters = useMemo(() => {

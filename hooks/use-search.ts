@@ -39,7 +39,10 @@ export function useSearch(options: UseSearchOptions = {}) {
     switch (type) {
       case 'transaction':
         // Navigate to transactions page with selected transaction highlighted
-        router.push(`/transactions?highlight=${result.id}`);
+        // Include the transaction date to help with loading the right time period
+        const transactionResult = result as TransactionSearchResult;
+        const transactionDate = new Date(transactionResult.date).toISOString().split('T')[0];
+        router.push(`/transactions?highlight=${result.id}&date=${transactionDate}`);
         break;
       
       case 'goal':

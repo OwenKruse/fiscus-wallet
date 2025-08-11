@@ -14,14 +14,13 @@ interface TransactionResultProps {
 export function TransactionResult({ transaction, onSelect, isHighlighted = false }: TransactionResultProps) {
   const isNegative = transaction.amount > 0;
   const displayAmount = Math.abs(transaction.amount);
-  
+
   return (
     <CommandItem
       value={`transaction-${transaction.id}-${transaction.name}`}
       onSelect={() => onSelect(transaction)}
-      className={`cursor-pointer ${
-        isHighlighted ? 'bg-accent text-accent-foreground' : ''
-      }`}
+      className={`cursor-pointer ${isHighlighted ? 'bg-accent text-accent-foreground' : ''
+        }`}
     >
       <div className="flex items-center gap-3 w-full">
         <div className="flex-shrink-0">
