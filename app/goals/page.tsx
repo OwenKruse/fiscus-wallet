@@ -2,6 +2,7 @@
 
 import React from "react"
 import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -90,6 +91,8 @@ const statusColors = {
 }
 
 export default function GoalsPage() {
+    const router = useRouter()
+    const searchParams = useSearchParams()
     const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null)
     const [isAddGoalOpen, setIsAddGoalOpen] = useState(false)
     const [isEditGoalOpen, setIsEditGoalOpen] = useState(false)
@@ -160,6 +163,31 @@ export default function GoalsPage() {
         addProgress,
         addProgressState
     } = useGoal(selectedGoal?.id || '')
+
+    // Handle URL parameter for focusing on specific goal from search
+    useEffect(() => {
+        const focusId = searchParams.get("focus")
+        if (focusId && goals.length > 0) {
+            const goal = goals.find((g) => g.id === focusId)
+            if (goal) {
+                // Set the goal as selected to show details
+                setSelectedGoal(goal)
+                
+                // Switch to the appropriate tab based on goal type/status
+                const category = goalTypeToCategory[goal.goalType] || goal.goalType
+                if (goal.status === "active") {
+                    setActiveTab("active")
+                } else if (goal.status === "completed") {
+                    setActiveTab("completed")
+                } else {
+                    setActiveTab(category)
+                }
+                
+                // Clear the URL parameter after focusing
+                router.replace("/goals")
+            }
+        }
+    }, [searchParams, goals, router])
 
     const formatCurrency = (amount: number | null | undefined) => {
         if (typeof amount !== 'number' || isNaN(amount)) {

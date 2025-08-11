@@ -33,6 +33,9 @@ export function useSearch(options: UseSearchOptions = {}) {
     result: TransactionSearchResult | GoalSearchResult | PageSearchResult,
     type: 'transaction' | 'goal' | 'page'
   ) => {
+    // Add to recent searches before navigating
+    searchContext.addRecentSearch(searchContext.query);
+    
     switch (type) {
       case 'transaction':
         // Navigate to transactions page with selected transaction highlighted
@@ -53,7 +56,7 @@ export function useSearch(options: UseSearchOptions = {}) {
     
     // Clear search results after navigation
     searchContext.clearResults();
-  }, [router, searchContext.clearResults]);
+  }, [router, searchContext.clearResults, searchContext.addRecentSearch, searchContext.query]);
 
   // Handle recent search selection
   const handleRecentSearchSelect = useCallback((recentQuery: string) => {

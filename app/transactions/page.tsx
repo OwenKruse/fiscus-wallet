@@ -174,17 +174,26 @@ export default function TransactionsPage() {
   const loadMoreRef = useRef<HTMLDivElement>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)
 
-  // Handle URL parameter for opening specific transaction
+  // Handle URL parameters for opening specific transaction
   useEffect(() => {
     const transactionId = searchParams.get("id")
-    if (transactionId) {
-      const transaction = transactions.find((t) => t.id === transactionId)
+    const highlightId = searchParams.get("highlight")
+    
+    if (transactionId || highlightId) {
+      const targetId = transactionId || highlightId
+      const transaction = transactions.find((t) => t.id === targetId)
       if (transaction) {
         setSelectedTransaction(transaction)
         setIsDetailOpen(true)
+        
+        // If this was from search highlight, clear the URL parameter after opening
+        if (highlightId && !transactionId) {
+          // Use replace to avoid adding to browser history
+          router.replace("/transactions")
+        }
       }
     }
-  }, [searchParams, transactions])
+  }, [searchParams, transactions, router])
 
   // Memoize filters to prevent unnecessary re-renders
   const currentFilters = useMemo(() => {
