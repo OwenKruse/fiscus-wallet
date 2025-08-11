@@ -358,7 +358,7 @@ export default function CalendarComponent({ dateRange, onDateRangeChange }: Cale
       <PopoverTrigger asChild>
         <Button variant="ghost" className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-lg">
           <Calendar className="h-4 w-4" />
-          <span className="text-sm">{dateRange}</span>
+          <span className="text-sm hidden md:inline">{dateRange}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="end">
