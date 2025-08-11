@@ -12,7 +12,7 @@ interface TransactionResultProps {
 }
 
 export function TransactionResult({ transaction, onSelect, isHighlighted = false }: TransactionResultProps) {
-  const isNegative = transaction.amount < 0;
+  const isNegative = transaction.amount > 0;
   const displayAmount = Math.abs(transaction.amount);
   
   return (

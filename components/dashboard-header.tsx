@@ -24,7 +24,7 @@ export function DashboardHeader({ title, children }: DashboardHeaderProps) {
 
         <div className="flex items-center gap-4">
           <div className="hidden lg:block">
-            <SearchTrigger 
+            <SearchTrigger
               onOpen={openSearch}
               placeholder="Search..."
               className="w-64"
@@ -32,9 +32,9 @@ export function DashboardHeader({ title, children }: DashboardHeaderProps) {
           </div>
 
           {/* Mobile search trigger */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             className="lg:hidden"
             onClick={openSearch}
           >
