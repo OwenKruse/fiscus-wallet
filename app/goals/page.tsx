@@ -1292,8 +1292,8 @@ export default function GoalsPage() {
                     </Dialog>
 
                     {/* Goals Tabs */}
-                    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 py-2 max-w-screen">
-                        <TabsList className="max-w-screen overflow-x-scroll">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 py-2">
+                        <TabsList className="max-w-screen overflow-x-scroll w-full lg:w-fit flex lg:block">
                             <TabsTrigger value="all">All Goals</TabsTrigger>
                             <TabsTrigger value="active">Active</TabsTrigger>
                             <TabsTrigger value="completed">Completed</TabsTrigger>
