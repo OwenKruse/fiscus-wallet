@@ -533,12 +533,11 @@ export default function AnalyticsPage() {
                 <DashboardHeader title="Analytics">
                     <Button
                         variant="outline"
-                        size="sm"
+                        size="icon"
                         onClick={handleRefresh}
                         disabled={isSyncing}
                     >
-                        <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-                        {isSyncing ? 'Syncing...' : 'Refresh'}
+                        <RefreshCw className={`h-4 w-4  ${isSyncing ? 'animate-spin' : ''}`} />
                     </Button>
                     <CalendarComponent dateRange={dateRange} onDateRangeChange={handleDateRangeChange} />
                 </DashboardHeader>
@@ -680,8 +679,8 @@ export default function AnalyticsPage() {
                                             <PieChart className="h-12 w-12 mx-auto mb-4" />
                                             <h3 className="text-lg font-semibold mb-2">No Financial Data Available</h3>
                                             <p className="text-sm mb-4">Connect your bank accounts to see detailed analytics</p>
-                                            <Button onClick={handleRefresh} disabled={isSyncing}>
-                                                <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                                            <Button size={'icon'} onClick={handleRefresh} disabled={isSyncing}>
+                                                <RefreshCw className={`h-4 w-4  ${isSyncing ? 'animate-spin' : ''}`} />
                                             </Button>
                                         </div>
                                     </CardContent>

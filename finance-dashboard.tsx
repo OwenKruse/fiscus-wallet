@@ -281,7 +281,7 @@ export default function FinanceDashboard() {
             onClick={handleRefresh}
             disabled={isSyncing}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
             
           </Button>
         </DashboardHeader>
