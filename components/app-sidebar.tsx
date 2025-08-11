@@ -70,12 +70,10 @@ export function AppSidebar() {
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-                <a href="#" className="flex items-center gap-2 px-2">
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">Wallet</span>
                     <span className="truncate text-xs">From Fiscus Financial</span>
                   </div>
-                </a>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
