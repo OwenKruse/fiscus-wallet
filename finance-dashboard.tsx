@@ -741,7 +741,7 @@ export default function FinanceDashboard() {
                             <YAxis hide />
                             <ChartTooltip
                               content={<ChartTooltipContent />}
-                              formatter={(value) => [`$${value.toLocaleString()}`, "Expenses"]}
+                              formatter={(value) => [`$${value.toLocaleString()}`, ""]}
                             />
                             <Bar dataKey="amount" fill="#1f2937" radius={[4, 4, 0, 0]} maxBarSize={40} />
                           </BarChart>
