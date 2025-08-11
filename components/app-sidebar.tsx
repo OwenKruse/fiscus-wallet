@@ -70,7 +70,7 @@ export function AppSidebar() {
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
+                  <div className="ml-1 grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">Wallet</span>
                     <span className="truncate text-xs">From Fiscus Financial</span>
                   </div>

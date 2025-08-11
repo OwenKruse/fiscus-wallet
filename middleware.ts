@@ -15,7 +15,6 @@ export async function middleware(request: NextRequest) {
   // If no token, redirect to sign in (except for public pages)
   if (!hasToken) {
     const signInUrl = new URL('/auth/signin', request.url)
-    signInUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(signInUrl)
   }
   return NextResponse.next()
