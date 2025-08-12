@@ -2,6 +2,7 @@
 
 export * from './plaid';
 export * from './nile';
+export * from './subscription';
 
 // Common API Response Types
 export interface ApiResponse<T = any> {
@@ -52,6 +53,11 @@ export interface AppConfig {
   encryption: {
     key: string;
   };
+  stripe: {
+    publishableKey: string;
+    secretKey: string;
+    webhookSecret: string;
+  };
 }
 
 // Request/Response Types for API Routes
@@ -79,6 +85,19 @@ export interface AuthResponse {
   };
   token: string;
   expiresAt: string;
+}
+
+export interface AuthResponseWithSubscription extends AuthResponse {
+  user: AuthResponse['user'] & {
+    subscription?: {
+      id: string;
+      tier: string;
+      status: string;
+      billingCycle: string;
+      currentPeriodEnd?: string;
+      cancelAtPeriodEnd: boolean;
+    };
+  };
 }
 
 export interface PlaidLinkTokenRequest {

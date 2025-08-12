@@ -9,6 +9,14 @@ import { errorUtils } from '../lib/error-handling';
 // Authentication context interface
 interface AuthContextType {
   user: AuthResponse['user'] | null;
+  subscription: {
+    id: string;
+    tier: string;
+    status: string;
+    billingCycle: string;
+    currentPeriodEnd?: string;
+    cancelAtPeriodEnd: boolean;
+  } | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   signIn: (credentials: AuthSignInRequest) => Promise<void>;
@@ -16,6 +24,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   error: string | null;
   clearError: () => void;
+  refreshSubscription: () => Promise<void>;
   signInState: {
     loading: string;
     error: string | null;
@@ -38,9 +47,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, isAuthenticated, isLoading, signIn, signUp, signOut, signInState, signUpState } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState<AuthContextType['subscription']>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
   // Clear error function
   const clearError = () => setError(null);
+
+  // Fetch user subscription
+  const fetchSubscription = async () => {
+    if (!user || !isAuthenticated) {
+      setSubscription(null);
+      return;
+    }
+
+    try {
+      setSubscriptionLoading(true);
+      const response = await fetch('/api/subscriptions', {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          setSubscription({
+            id: data.data.id,
+            tier: data.data.tier,
+            status: data.data.status,
+            billingCycle: data.data.billingCycle,
+            currentPeriodEnd: data.data.currentPeriodEnd,
+            cancelAtPeriodEnd: data.data.cancelAtPeriodEnd,
+          });
+        } else {
+          // User doesn't have a subscription yet, set to null
+          setSubscription(null);
+        }
+      } else {
+        console.error('Failed to fetch subscription:', response.status);
+        setSubscription(null);
+      }
+    } catch (error) {
+      console.error('Error fetching subscription:', error);
+      setSubscription(null);
+    } finally {
+      setSubscriptionLoading(false);
+    }
+  };
+
+  // Refresh subscription function
+  const refreshSubscription = async () => {
+    await fetchSubscription();
+  };
+
+  // Fetch subscription when user changes
+  useEffect(() => {
+    fetchSubscription();
+  }, [user, isAuthenticated]);
 
   // Handle sign in with error handling
   const handleSignIn = async (credentials: AuthSignInRequest) => {
@@ -126,13 +188,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Context value
   const contextValue: AuthContextType = {
     user,
+    subscription,
     isAuthenticated,
-    isLoading,
+    isLoading: isLoading || subscriptionLoading,
     signIn: handleSignIn,
     signUp: handleSignUp,
     signOut: handleSignOut,
     error,
     clearError,
+    refreshSubscription,
     signInState,
     signUpState,
   };

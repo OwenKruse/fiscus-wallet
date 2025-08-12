@@ -1,5 +1,8 @@
 // Test setup for Vitest
 import { beforeAll, afterAll } from 'vitest';
+import '@testing-library/jest-dom';
+import { cleanup } from '@testing-library/react';
+import { afterEach } from 'vitest';
 
 // Mock environment variables for testing
 beforeAll(() => {
@@ -10,7 +13,14 @@ beforeAll(() => {
   process.env.NILEDB_DATABASE = 'test_db';
   process.env.JWT_SECRET = 'test-jwt-secret';
   process.env.ENCRYPTION_KEY = 'test-encryption-key-32-chars-long';
+  process.env.STRIPE_PUBLISHABLE_KEY = 'pk_test_test_publishable_key';
+  process.env.STRIPE_SECRET_KEY = 'sk_test_test_secret_key';
+  process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_webhook_secret';
   process.env.NODE_ENV = 'test';
+});
+
+afterEach(() => {
+  cleanup();
 });
 
 afterAll(() => {

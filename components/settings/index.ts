@@ -28,5 +28,11 @@ export { AccountsSettings } from './accounts-settings';
 export { ConnectedAccountsList } from './connected-accounts-list';
 export { AccountConnectionManager } from './account-connection-manager';
 
+// Subscription Settings Components
+export { SubscriptionSettings } from './subscription-settings';
+export { PlanChangeDialog } from './plan-change-dialog';
+export { BillingHistory } from './billing-history';
+export { PaymentMethodForm } from './payment-method-form';
+
 // Main Settings Page
 export { SettingsPageContent } from './settings-page-content';

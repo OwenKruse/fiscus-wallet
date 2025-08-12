@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withApiAuth } from '@/lib/auth/api-middleware';
 import type { ExportUserDataResponse } from '@/types';
+import { PrismaClient } from '@prisma/client';
+import { SubscriptionService } from '@/lib/subscription/subscription-service';
+import { TierEnforcementService } from '@/lib/subscription/tier-enforcement-service';
+import { FeatureNotAvailableError } from '@/lib/subscription/types';
 
 /**
  * POST /api/settings/export
@@ -9,6 +13,32 @@ import type { ExportUserDataResponse } from '@/types';
 export const POST = withApiAuth(async (request: NextRequest, context) => {
   try {
     const { user } = context;
+
+    // Check tier enforcement for data export feature
+    const prisma = new PrismaClient();
+    const subscriptionService = new SubscriptionService(prisma);
+    const tierEnforcementService = new TierEnforcementService(prisma, subscriptionService);
+
+    try {
+      await tierEnforcementService.checkFeatureAccessWithThrow(user.id, 'csv_export');
+    } catch (error) {
+      if (error instanceof FeatureNotAvailableError) {
+        return NextResponse.json({
+          success: false,
+          error: {
+            code: 'FEATURE_NOT_AVAILABLE',
+            message: error.message,
+            feature: error.feature,
+            requiredTier: error.requiredTier,
+            upgradeRequired: true
+          }
+        }, { status: 403 });
+      }
+      throw error;
+    }
+
+    // Track usage for export feature
+    await subscriptionService.trackUsage(user.id, 'transaction_exports', 1);
 
     // TODO: In a real implementation, you would:
     // 1. Gather all user data from various services

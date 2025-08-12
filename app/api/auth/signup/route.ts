@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getNileAuthService } from '../../../../lib/auth/nile-auth-service';
 import { NileUserCreateRequest } from '../../../../types/nile';
 import { withRateLimit, withUnauthenticatedAuditLog } from '../../../../lib/auth/auth-middleware';
+import { SubscriptionService } from '../../../../lib/subscription/subscription-service';
+import { StripeService } from '../../../../lib/stripe/stripe-service';
+import { SubscriptionTier, BillingCycle } from '../../../../lib/subscription/tier-config';
+import { prisma } from '../../../../lib/database/prisma-client';
 
 // --- Validation Schema ---
 // No changes here. Your validation logic is solid and specific.
@@ -95,6 +99,39 @@ function createSuccessResponse(authResponse: any) {
   return res;
 }
 
+/* ───────────────────────────── subscription creation logic ───────────────────────────── */
+
+async function createUserSubscription(userId: string, email: string, name: string): Promise<void> {
+  const subscriptionService = new SubscriptionService(prisma);
+  const stripeService = new StripeService();
+
+  try {
+    // Create Stripe customer for the user
+    const stripeCustomer = await stripeService.createCustomer({
+      userId,
+      email,
+      name: name || undefined,
+    });
+
+    console.log('Stripe customer created:', stripeCustomer.id);
+
+    // Create default Starter subscription
+    await subscriptionService.createSubscription({
+      userId,
+      tier: SubscriptionTier.STARTER,
+      billingCycle: BillingCycle.MONTHLY,
+      stripeCustomerId: stripeCustomer.id,
+      // No stripeSubscriptionId for free tier
+      // No trialEnd for free tier
+    });
+
+    console.log('Starter subscription created for user:', userId);
+  } catch (error) {
+    console.error('Error creating user subscription:', error);
+    throw error;
+  }
+}
+
 /* ───────────────────────────── main sign-up logic ───────────────────────────── */
 
 async function signUpHandler(req: NextRequest): Promise<NextResponse> {
@@ -130,6 +167,18 @@ async function signUpHandler(req: NextRequest): Promise<NextResponse> {
     const status = code === 'USER_ALREADY_EXISTS' ? 409 : 400;
     console.error('Sign up failed:', { code, errorMessage, status });
     return createErrorResponse(errorMessage, status, code);
+  }
+
+  console.log('Sign up successful, creating subscription for user:', authResponse.user);
+  
+  // Create subscription and Stripe customer for new user
+  try {
+    await createUserSubscription(authResponse.user.id, payload.email, `${payload.firstName || ''} ${payload.lastName || ''}`.trim());
+    console.log('Subscription created successfully for user:', authResponse.user.id);
+  } catch (subscriptionError) {
+    console.error('Failed to create subscription for user:', authResponse.user.id, subscriptionError);
+    // Don't fail the signup if subscription creation fails, but log the error
+    // The user can still use the app and subscription can be created later
   }
 
   console.log('Sign up successful, creating response with user:', authResponse.user);

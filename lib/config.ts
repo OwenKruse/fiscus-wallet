@@ -47,6 +47,12 @@ export const config: AppConfig = {
   encryption: {
     key: getEnvVar('ENCRYPTION_KEY'),
   },
+  
+  stripe: {
+    publishableKey: getEnvVar('STRIPE_PUBLISHABLE_KEY'),
+    secretKey: getEnvVar('STRIPE_SECRET_KEY'),
+    webhookSecret: getEnvVar('STRIPE_WEBHOOK_SECRET'),
+  },
 };
 
 // Validation function to ensure all required config is present
@@ -61,6 +67,9 @@ export function validateConfig(): void {
     'nile.database',
     'jwt.secret',
     'encryption.key',
+    'stripe.publishableKey',
+    'stripe.secretKey',
+    'stripe.webhookSecret',
   ];
 
   const missingFields: string[] = [];
@@ -91,6 +100,7 @@ export const getPlaidConfig = () => config.plaid;
 export const getNileConfig = () => config.nile;
 export const getJWTConfig = () => config.jwt;
 export const getEncryptionConfig = () => config.encryption;
+export const getStripeConfig = () => config.stripe;
 
 // Environment helpers
 export const isDevelopment = () => config.environment === 'development';

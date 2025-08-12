@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPlaidService } from '@/lib/plaid/plaid-service';
 import { withApiAuth, withApiLogging } from '@/lib/auth/api-middleware';
 import { ApiResponse } from '@/types';
+import { PrismaClient } from '@prisma/client';
+import { SubscriptionService } from '@/lib/subscription/subscription-service';
+import { TierEnforcementService } from '@/lib/subscription/tier-enforcement-service';
+import { FeatureNotAvailableError } from '@/lib/subscription/types';
 
 export interface InvestmentHolding {
   id: string;
@@ -81,6 +85,29 @@ async function getInvestmentsHandler(
   try {
     const { user } = context;
     const plaidService = getPlaidService();
+
+    // Check tier enforcement for investment tracking feature
+    const prisma = new PrismaClient();
+    const subscriptionService = new SubscriptionService(prisma);
+    const tierEnforcementService = new TierEnforcementService(prisma, subscriptionService);
+
+    try {
+      await tierEnforcementService.checkFeatureAccessWithThrow(user.id, 'investment_tracking');
+    } catch (error) {
+      if (error instanceof FeatureNotAvailableError) {
+        return NextResponse.json({
+          success: false,
+          error: {
+            code: 'FEATURE_NOT_AVAILABLE',
+            message: error.message,
+            feature: error.feature,
+            requiredTier: error.requiredTier,
+            upgradeRequired: true
+          }
+        }, { status: 403 });
+      }
+      throw error;
+    }
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);

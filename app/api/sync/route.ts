@@ -3,6 +3,10 @@ import { getDataSyncService } from '../../../lib/sync/data-sync-service';
 import { withApiAuth, withApiLogging } from '../../../lib/auth/api-middleware';
 import { withAppInitialization } from '../../../lib/middleware/app-init-middleware';
 import { SyncRequest, SyncResponse } from '../../../types';
+import { PrismaClient } from '@prisma/client';
+import { SubscriptionService } from '../../../lib/subscription/subscription-service';
+import { TierEnforcementService } from '../../../lib/subscription/tier-enforcement-service';
+import { SubscriptionTier } from '../../../lib/subscription/tier-config';
 
 // Create error response
 function createErrorResponse(message: string, status: number = 400, code?: string) {
@@ -45,6 +49,30 @@ function validateSyncRequest(body: any): SyncRequest {
   return request;
 }
 
+// Helper function to get last sync time for a user
+async function getLastSyncTime(userId: string): Promise<Date | null> {
+  try {
+    const syncService = getDataSyncService();
+    // This would need to be implemented in the sync service
+    // For now, we'll use a simple approach with the database
+    const prisma = new PrismaClient();
+    
+    // Query the most recent sync job for this user
+    const lastSync = await prisma.$queryRaw<Array<{ created_at: Date }>>`
+      SELECT created_at 
+      FROM sync_jobs 
+      WHERE user_id = ${userId}::uuid 
+      ORDER BY created_at DESC 
+      LIMIT 1
+    `;
+    
+    return lastSync.length > 0 ? lastSync[0].created_at : null;
+  } catch (error) {
+    console.warn('Failed to get last sync time:', error);
+    return null; // Allow sync if we can't determine last sync time
+  }
+}
+
 // Main handler for triggering data synchronization
 async function syncDataHandler(
   request: NextRequest,
@@ -65,12 +93,54 @@ async function syncDataHandler(
       }
     }
 
+    // Check tier enforcement for sync frequency
+    const prisma = new PrismaClient();
+    const subscriptionService = new SubscriptionService(prisma);
+    const tierEnforcementService = new TierEnforcementService(prisma, subscriptionService);
+
+    const userTier = await subscriptionService.getUserTier(user.id);
+    const syncFrequency = await tierEnforcementService.enforceSyncFrequency(user.id);
+
+    // Check if user is on Starter tier and trying to sync too frequently
+    if (userTier === SubscriptionTier.STARTER) {
+      // Check last sync time to enforce daily limit
+      const lastSyncTime = await getLastSyncTime(user.id);
+      const now = new Date();
+      const timeSinceLastSync = lastSyncTime ? now.getTime() - lastSyncTime.getTime() : Infinity;
+      const hoursInMs = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+      if (timeSinceLastSync < hoursInMs) {
+        const nextAllowedSync = new Date(lastSyncTime.getTime() + hoursInMs);
+        return NextResponse.json({
+          success: false,
+          error: {
+            code: 'SYNC_FREQUENCY_LIMIT_EXCEEDED',
+            message: `Starter tier allows daily syncs only. Next sync available at ${nextAllowedSync.toISOString()}`,
+            nextAllowedSync: nextAllowedSync.toISOString(),
+            currentTier: userTier,
+            requiredTier: SubscriptionTier.GROWTH,
+            upgradeRequired: true
+          }
+        }, { status: 429 });
+      }
+    }
+
+    // Determine sync priority based on tier
+    let priority: 'low' | 'normal' | 'high' = 'normal';
+    if (userTier === SubscriptionTier.PRO) {
+      priority = 'high'; // Pro gets priority processing
+    } else if (userTier === SubscriptionTier.GROWTH) {
+      priority = 'normal'; // Growth gets normal priority
+    } else {
+      priority = 'low'; // Starter gets low priority
+    }
+
     // Queue sync job
     const jobId = await syncService.queueSync({
       userId: user.id,
       accountIds: syncRequest.accountIds,
       forceRefresh: syncRequest.forceRefresh || false,
-      priority: 'high', // Manual sync gets high priority
+      priority,
     });
 
     // Also trigger goal progress calculation after sync

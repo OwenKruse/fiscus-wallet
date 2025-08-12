@@ -7,9 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, User, Bell, Monitor, Shield, CreditCard, ArrowLeft } from 'lucide-react';
+import { AlertCircle, User, Bell, Monitor, Shield, CreditCard, ArrowLeft, Crown } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
-import { ProfileForm, ProfilePictureUpload, EmailChangeForm, NotificationSettings, DisplaySettings, PrivacySettings, AccountsSettings } from '@/components/settings';
+import { ProfileForm, ProfilePictureUpload, EmailChangeForm, NotificationSettings, DisplaySettings, PrivacySettings, AccountsSettings, SubscriptionSettings } from '@/components/settings';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
@@ -21,7 +21,7 @@ export function SettingsPageContent() {
   // Read hash from URL on mount and set active tab
   useEffect(() => {
     const hash = window.location.hash.slice(1); // Remove the # symbol
-    const validTabs = ['profile', 'notifications', 'display', 'privacy', 'accounts'];
+    const validTabs = ['profile', 'notifications', 'display', 'privacy', 'accounts', 'subscription'];
     
     if (hash && validTabs.includes(hash)) {
       setActiveTab(hash);
@@ -83,7 +83,7 @@ export function SettingsPageContent() {
       <Separator />
       
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:grid-cols-6">
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             <span className="hidden sm:inline">Profile</span>
@@ -103,6 +103,10 @@ export function SettingsPageContent() {
           <TabsTrigger value="accounts" className="flex items-center gap-2">
             <CreditCard className="h-4 w-4" />
             <span className="hidden sm:inline">Accounts</span>
+          </TabsTrigger>
+          <TabsTrigger value="subscription" className="flex items-center gap-2">
+            <Crown className="h-4 w-4" />
+            <span className="hidden sm:inline">Subscription</span>
           </TabsTrigger>
         </TabsList>
 
@@ -126,6 +130,10 @@ export function SettingsPageContent() {
 
         <TabsContent value="accounts" className="space-y-6">
           <AccountsSettings />
+        </TabsContent>
+
+        <TabsContent value="subscription" className="space-y-6">
+          <SubscriptionSettings />
         </TabsContent>
       </Tabs>
     </div>

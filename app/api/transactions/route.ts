@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCacheService } from '../../../lib/cache/cache-service';
 import { withApiAuth, withApiLogging } from '../../../lib/auth/api-middleware';
 import { TransactionsRequest, TransactionsResponse } from '../../../types';
+import { PrismaClient } from '@prisma/client';
+import { SubscriptionService } from '../../../lib/subscription/subscription-service';
+import { TierEnforcementService } from '../../../lib/subscription/tier-enforcement-service';
 
 // Create error response
 function createErrorResponse(message: string, status: number = 400, code?: string) {
@@ -118,10 +121,30 @@ async function getTransactionsHandler(
       }
     }
 
+    // Check tier enforcement for transaction history limits
+    const prisma = new PrismaClient();
+    const subscriptionService = new SubscriptionService(prisma);
+    const tierEnforcementService = new TierEnforcementService(prisma, subscriptionService);
+
+    const transactionHistoryMonths = await tierEnforcementService.enforceTransactionHistory(user.id);
+    
+    // Apply transaction history limit based on tier
+    let effectiveStartDate = filters.startDate ? new Date(filters.startDate) : undefined;
+    
+    if (transactionHistoryMonths !== -1) { // -1 means unlimited
+      const limitDate = new Date();
+      limitDate.setMonth(limitDate.getMonth() - transactionHistoryMonths);
+      
+      // If user requested data older than their tier allows, limit it
+      if (!effectiveStartDate || effectiveStartDate < limitDate) {
+        effectiveStartDate = limitDate;
+      }
+    }
+
     // Get transactions from cache service
     const transactionsResponse = await cacheService.getTransactions(user.id, {
       ...filters,
-      startDate: filters.startDate ? new Date(filters.startDate) : undefined,
+      startDate: effectiveStartDate,
       endDate: filters.endDate ? new Date(filters.endDate) : undefined,
     });
 

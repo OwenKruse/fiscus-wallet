@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPlaidService } from '../../../../lib/plaid/plaid-service';
 import { withApiAuth, withApiLogging, withValidation } from '../../../../lib/auth/api-middleware';
 import { PlaidExchangeTokenRequest, PlaidExchangeTokenResponse } from '../../../../types';
+import { PrismaClient } from '@prisma/client';
+import { SubscriptionService } from '../../../../lib/subscription/subscription-service';
+import { TierEnforcementService } from '../../../../lib/subscription/tier-enforcement-service';
+import { TierLimitExceededError } from '../../../../lib/subscription/types';
 
 // Validation for exchange token request
 function validateExchangeTokenRequest(body: any): { isValid: boolean; errors: string[]; data?: PlaidExchangeTokenRequest } {
@@ -50,8 +54,36 @@ async function exchangeTokenHandler(
     const { user } = context;
     const plaidService = getPlaidService();
 
+    // Check tier enforcement for account connection
+    const prisma = new PrismaClient();
+    const subscriptionService = new SubscriptionService(prisma);
+    const tierEnforcementService = new TierEnforcementService(prisma, subscriptionService);
+
+    try {
+      await tierEnforcementService.checkAccountLimitWithThrow(user.id);
+    } catch (error) {
+      if (error instanceof TierLimitExceededError) {
+        return NextResponse.json({
+          success: false,
+          error: {
+            code: 'ACCOUNT_LIMIT_EXCEEDED',
+            message: error.message,
+            limitType: error.limitType,
+            currentValue: error.currentValue,
+            limitValue: error.limitValue,
+            requiredTier: error.requiredTier,
+            upgradeRequired: true
+          }
+        }, { status: 403 });
+      }
+      throw error;
+    }
+
     // Exchange public token for access token and store connection
     const connectionResult = await plaidService.exchangePublicToken(body.publicToken, user.id);
+
+    // Track the new account connection in usage metrics
+    await subscriptionService.trackUsage(user.id, 'connected_accounts', 1);
 
     // Automatically sync transactions for the new connection
     try {
