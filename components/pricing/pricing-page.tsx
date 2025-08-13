@@ -10,12 +10,14 @@ interface PricingPageProps {
   onSelectPlan?: (tier: SubscriptionTier, cycle: BillingCycle) => void
   currentTier?: SubscriptionTier
   className?: string
+  isLoading?: boolean
 }
 
 export function PricingPage({ 
   onSelectPlan = () => {}, 
   currentTier = SubscriptionTier.STARTER,
-  className 
+  className,
+  isLoading = false
 }: PricingPageProps) {
   const [billingCycle, setBillingCycle] = useState<BillingCycle>(BillingCycle.MONTHLY)
 
@@ -67,6 +69,7 @@ export function PricingPage({
           billingCycle={billingCycle}
           onSelectPlan={handlePlanSelect}
           className="md:mt-8"
+          disabled={isLoading}
         />
         
         <PricingCard
@@ -74,6 +77,7 @@ export function PricingPage({
           billingCycle={billingCycle}
           isPopular={true}
           onSelectPlan={handlePlanSelect}
+          disabled={isLoading}
         />
         
         <PricingCard
@@ -81,6 +85,7 @@ export function PricingPage({
           billingCycle={billingCycle}
           onSelectPlan={handlePlanSelect}
           className="md:mt-8"
+          disabled={isLoading}
         />
       </div>
 

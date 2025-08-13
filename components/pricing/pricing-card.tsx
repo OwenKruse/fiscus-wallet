@@ -13,6 +13,7 @@ interface PricingCardProps {
   isPopular?: boolean
   onSelectPlan: (tier: SubscriptionTier, cycle: BillingCycle) => void
   className?: string
+  disabled?: boolean
 }
 
 const TIER_TAGLINES = {
@@ -39,7 +40,8 @@ export function PricingCard({
   billingCycle, 
   isPopular = false, 
   onSelectPlan, 
-  className 
+  className,
+  disabled = false
 }: PricingCardProps) {
   const config = TIER_CONFIGS[tier]
   const pricing = TIER_PRICING[tier]
@@ -174,9 +176,9 @@ export function PricingCard({
           className="w-full" 
           variant={isPopular ? 'default' : 'outline'}
           onClick={() => onSelectPlan(tier, billingCycle)}
-          disabled={tier === SubscriptionTier.STARTER}
+          disabled={tier === SubscriptionTier.STARTER || disabled}
         >
-          {tier === SubscriptionTier.STARTER ? 'Current Plan' : 'Get Started'}
+          {disabled ? 'Processing...' : tier === SubscriptionTier.STARTER ? 'Current Plan' : 'Get Started'}
         </Button>
       </CardFooter>
     </Card>
