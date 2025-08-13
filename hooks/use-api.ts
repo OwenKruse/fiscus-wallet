@@ -261,15 +261,25 @@ export function useTransactions(initialFilters?: TransactionsRequest) {
 
   const updateFilters = useCallback((newFilters: Partial<TransactionsRequest>) => {
     // Clean up the filters to ensure proper handling of undefined/empty values
-    const cleanedFilters: TransactionsRequest = { ...newFilters };
+    const cleanedFilters: TransactionsRequest = {};
 
-    // Remove accountIds if it's undefined or empty array
-    if (cleanedFilters.accountIds === undefined || (Array.isArray(cleanedFilters.accountIds) && cleanedFilters.accountIds.length === 0)) {
-      delete cleanedFilters.accountIds;
-    }
+    // Only include defined filter values
+    Object.keys(newFilters).forEach(key => {
+      const value = newFilters[key as keyof TransactionsRequest];
+      if (value !== undefined && value !== null) {
+        // For arrays, only include if not empty
+        if (Array.isArray(value)) {
+          if (value.length > 0) {
+            cleanedFilters[key as keyof TransactionsRequest] = value as any;
+          }
+        } else {
+          cleanedFilters[key as keyof TransactionsRequest] = value as any;
+        }
+      }
+    });
 
-    // Reset to first page when filters change
-    const updatedFilters = { ...filtersRef.current, ...cleanedFilters, page: 1 };
+    // Always reset to first page when filters change
+    const updatedFilters = { ...cleanedFilters, page: 1 };
     console.log('Updating filters:', { oldFilters: filtersRef.current, newFilters: cleanedFilters, updatedFilters }); // Debug log
 
     setFilters(updatedFilters);
