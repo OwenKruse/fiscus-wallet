@@ -243,7 +243,7 @@ export function PlaidLinkButton({
                   </div>
                 </div>
               )}
-              
+
             </div>
           </DialogContent>
         </DialogPortal>
@@ -251,14 +251,14 @@ export function PlaidLinkButton({
 
       {/* Plaid Link Initializer */}
       <PlaidLinkInitializer
-                linkToken={linkToken}
-                onSuccess={handlePlaidSuccess}
-                onExit={handlePlaidExit}
-                onLoad={() => {
-                  setIsOpen(false)
-                  setIsConnecting(false)
-                }}
-              />
+        linkToken={linkToken}
+        onSuccess={handlePlaidSuccess}
+        onExit={handlePlaidExit}
+        onLoad={() => {
+          setIsOpen(false)
+          setIsConnecting(false)
+        }}
+      />
     </>
   )
 } 

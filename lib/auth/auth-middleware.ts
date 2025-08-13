@@ -360,3 +360,6 @@ export function withUnauthenticatedAuditLog(
     }
   };
 }
+
+// Export alias for backward compatibility
+export const authMiddleware = withAuth;

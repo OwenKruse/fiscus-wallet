@@ -344,3 +344,6 @@ export function composeMiddleware<T extends any[]>(
     return middlewares.reduceRight((acc, middleware) => middleware(acc), handler);
   };
 }
+
+// Export alias for backward compatibility
+export const authenticateRequest = getApiAuthContext;

@@ -360,6 +360,30 @@ export class PrismaAuthService implements NileAuthService {
       // Don't throw error for session creation - just log it
     }
   }
+
+  async resendEmailVerification(email: string): Promise<void> {
+    try {
+      // Check if user exists
+      const user = await this.prisma.users.findFirst({
+        where: { email }
+      });
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // For now, just log the verification email request
+      // In a production environment, you'd integrate with an email service
+      console.log('Email verification requested for:', email);
+      
+      // TODO: Integrate with email service (SendGrid, AWS SES, etc.)
+      // await emailService.sendVerificationEmail(email, verificationToken);
+      
+    } catch (error) {
+      console.error('Resend email verification error:', error);
+      throw new Error('Failed to resend verification email');
+    }
+  }
 }
 
 // Singleton instance

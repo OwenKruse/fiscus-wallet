@@ -1,3 +1,5 @@
+'use client'
+
 import { PricingPage } from '@/components/pricing'
 import { SubscriptionTier, BillingCycle } from '@/lib/subscription/tier-config'
 
