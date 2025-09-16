@@ -41,7 +41,20 @@ function createErrorResponse(message: string, status: number = 400, code?: strin
 }
 
 // Create success response with secure cookie
-function createSuccessResponse(authResponse: any) {
+function isSecureRequest(request: NextRequest): boolean {
+  try {
+    const proto = request.nextUrl.protocol;
+    const host = request.headers.get('host') || '';
+    const isLocalhost = host.includes('localhost') || host.startsWith('127.0.0.1') || host.startsWith('0.0.0.0');
+    // Use secure cookies only when not on localhost and using https or production env
+    return !isLocalhost && (proto === 'https:' || process.env.NODE_ENV === 'production');
+  } catch {
+    return process.env.NODE_ENV === 'production';
+  }
+}
+
+// Create success response with secure cookie
+function createSuccessResponse(authResponse: any, request: NextRequest) {
   const response = NextResponse.json({
     success: true,
     data: {
@@ -56,7 +69,7 @@ function createSuccessResponse(authResponse: any) {
   // Set secure HTTP-only cookie for token
   response.cookies.set('auth-token', authResponse.token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isSecureRequest(request),
     sameSite: 'strict',
     maxAge: 7 * 24 * 60 * 60, // 7 days
     path: '/'
@@ -106,7 +119,7 @@ async function signInHandler(request: NextRequest): Promise<NextResponse> {
 
     console.log('Sign in successful, creating response with user:', authResponse.user);
     // Return success response with cookie
-    return createSuccessResponse(authResponse);
+    return createSuccessResponse(authResponse, request);
 
   } catch (error) {
     console.error('Sign in error:', error);

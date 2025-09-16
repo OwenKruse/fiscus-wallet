@@ -160,9 +160,26 @@ export default function GoalsPage() {
 
     // Individual goal hook for manual progress
     const {
+        goal: loadedGoal,
         addProgress,
         addProgressState
     } = useGoal(selectedGoal?.id || '')
+
+    // Keep the selectedGoal in sync with any updates from either
+    // the goals list or the individual goal loader so UI reflects changes
+    useEffect(() => {
+        if (!selectedGoal) return
+        const updated = goals.find(g => g.id === selectedGoal.id)
+        if (updated && updated !== selectedGoal) {
+            setSelectedGoal(updated)
+        }
+    }, [goals, selectedGoal?.id])
+
+    useEffect(() => {
+        if (selectedGoal && loadedGoal && loadedGoal.id === selectedGoal.id) {
+            setSelectedGoal(loadedGoal)
+        }
+    }, [loadedGoal, selectedGoal?.id])
 
     // Goals sync hook for manual progress sync
     const {
@@ -563,8 +580,32 @@ export default function GoalsPage() {
 
             await addProgress(progressData)
 
-            // Refresh goals to get updated progress
-            await refreshGoals()
+            // Optimistically update the selected goal's current amount
+            // so the modal reflects changes immediately.
+            setSelectedGoal(prev => {
+                if (!prev) return prev
+                let newAmount = prev.currentAmount || 0
+                if (progressData.progressType === 'manual_add') {
+                    newAmount += progressData.amount
+                } else if (progressData.progressType === 'manual_subtract') {
+                    newAmount -= progressData.amount
+                } else if (progressData.progressType === 'adjustment') {
+                    newAmount = progressData.amount
+                }
+                if (newAmount < 0) newAmount = 0
+                return { ...prev, currentAmount: newAmount }
+            })
+
+            // Refresh goals to reconcile with backend and sync selectedGoal
+            try {
+                const res: any = await refreshGoals()
+                if (res && Array.isArray(res.goals) && selectedGoal) {
+                    const updated = res.goals.find((g: Goal) => g.id === selectedGoal.id)
+                    if (updated) setSelectedGoal(updated)
+                }
+            } catch (_) {
+                // no-op; optimistic update already applied
+            }
 
             setIsAddProgressOpen(false)
             resetProgressForm()
