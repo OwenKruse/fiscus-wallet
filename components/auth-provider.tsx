@@ -109,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setError(null);
       await signIn(credentials);
-      router.push('/'); // Redirect to dashboard after successful sign in
+      router.push('/dashboard'); // Redirect to dashboard after successful sign in
     } catch (err) {
       console.error('Sign in error details:', err);
       
@@ -143,7 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Attempting sign up with data:', { email: userData.email, firstName: userData.firstName });
       await signUp(userData);
       console.log('Sign up successful');
-      router.push('/'); // Redirect to dashboard after successful sign up
+      router.push('/dashboard'); // Redirect to dashboard after successful sign up
     } catch (err) {
       console.error('Sign up error details:', err);
       
