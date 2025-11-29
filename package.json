@@ -56,6 +56,7 @@
     "date-fns": "4.1.0",
     "dotenv": "^17.2.1",
     "embla-carousel-react": "latest",
+    "framer-motion": "^12.23.24",
     "geist": "latest",
     "input-otp": "latest",
     "jsonwebtoken": "^9.0.2",
@@ -74,7 +75,7 @@
     "recharts": "latest",
     "sonner": "latest",
     "stripe": "^18.4.0",
-    "tailwind-merge": "^3.3.1",
+    "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "latest",
     "zod": "^3.24.1"
