@@ -54,10 +54,10 @@ export default function LandingPage() {
           </nav>
           <div className="flex items-center gap-2">
             <Button asChild variant="ghost" className="text-white/80 hover:text-white">
-              <Link href="/signin">Sign in</Link>
+              <Link href="/auth/signin">Sign in</Link>
             </Button>
             <Button asChild className="bg-white text-[#030712] hover:bg-white/90">
-              <Link href="/signup">Create account</Link>
+              <Link href="/auth/signup">Create account</Link>
             </Button>
           </div>
         </div>
@@ -92,7 +92,7 @@ export default function LandingPage() {
             </motion.p>
             <div className="flex flex-wrap items-center gap-4">
               <Button asChild size="lg" className="group bg-white text-[#030712] hover:bg-white/80">
-                <Link href="/signup">
+                <Link href="/auth/signup">
                   Start tracking free
                   <ArrowRight className="ml-2 h-4 w-4 transition group-hover:translate-x-0.5" />
                 </Link>
@@ -327,7 +327,7 @@ export default function LandingPage() {
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
               <Button asChild size="lg" className="bg-white text-[#030712] hover:bg-white/80">
-                <Link href="/signup">Start tracking free</Link>
+                <Link href="/auth/signup">Start tracking free</Link>
               </Button>
               <Button asChild size="lg" variant="secondary" className="bg-transparent text-white ring-1 ring-white/30 hover:bg-white/10">
                 <Link href="/pricing">
