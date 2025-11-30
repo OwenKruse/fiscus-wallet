@@ -1,9 +1,10 @@
 'use client'
 
-import React, { createContext, useContext, useCallback } from 'react'
+import React, { createContext, useContext, useCallback, useEffect } from 'react'
 import { SubscriptionTier, BillingCycle } from '@/lib/subscription/tier-config'
 import { UpgradePrompt, UpgradePromptType, UpgradeReason } from './upgrade-prompt'
 import { useUpgradePrompts, UseUpgradePromptsOptions } from '@/hooks/use-upgrade-prompts'
+import { eventBus, EVENTS } from '@/lib/events'
 
 interface UpgradePromptContextValue {
   checkAccountLimit: (accountCount: number) => boolean
@@ -49,6 +50,40 @@ export function UpgradePromptProvider({
     currentUsage,
     onUpgradeRequested
   })
+
+  // Listen for global limit events
+  useEffect(() => {
+    const handleLimitExceeded = (data: any) => {
+      let reason: UpgradeReason = 'account_limit'
+      const promptData: any = {}
+
+      if (data?.limitType === 'Connected accounts') {
+        reason = 'account_limit'
+        promptData.accountCount = data.currentValue
+        promptData.accountLimit = data.limitValue
+      } else if (data?.limitType === 'Total balance tracking') {
+        reason = 'balance_limit'
+        promptData.currentBalance = data.currentValue
+        promptData.balanceLimit = data.limitValue
+      }
+
+      showUpgradePrompt(reason, promptData)
+    }
+
+    const handleFeatureLocked = (data: any) => {
+      showUpgradePrompt('feature_locked', {
+        featureName: data?.feature
+      })
+    }
+
+    eventBus.on(EVENTS.TIER_LIMIT_EXCEEDED, handleLimitExceeded)
+    eventBus.on(EVENTS.FEATURE_LOCKED, handleFeatureLocked)
+
+    return () => {
+      eventBus.off(EVENTS.TIER_LIMIT_EXCEEDED, handleLimitExceeded)
+      eventBus.off(EVENTS.FEATURE_LOCKED, handleFeatureLocked)
+    }
+  }, [showUpgradePrompt])
 
   const handleUpgrade = useCallback((tier: SubscriptionTier, cycle: BillingCycle) => {
     onUpgrade?.(tier, cycle)

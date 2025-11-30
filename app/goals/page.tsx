@@ -36,6 +36,7 @@ import {
     Search,
     Bell,
     User,
+    RefreshCw,
 } from "lucide-react"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
@@ -88,6 +89,7 @@ const statusColors = {
     active: "bg-blue-100 text-blue-800",
     completed: "bg-green-100 text-green-800",
     paused: "bg-gray-100 text-gray-800",
+    cancelled: "bg-red-100 text-red-800",
 }
 
 export default function GoalsPage() {
@@ -536,7 +538,7 @@ export default function GoalsPage() {
             // Reset tracking config when method changes
             setFormData(prev => ({
                 ...prev,
-                [field]: value,
+                [field]: value as Goal['trackingMethod'],
                 trackingConfig: {
                     accountIds: [],
                     categoryFilters: [],
@@ -618,7 +620,7 @@ export default function GoalsPage() {
             console.error('Failed to add progress:', error)
             toast({
                 title: "Error",
-                description: "Failed to add progress. Please try again.",
+                description: error instanceof Error ? error.message : "Failed to add progress. Please try again.",
                 variant: "destructive",
             })
         } finally {
@@ -688,8 +690,16 @@ export default function GoalsPage() {
         <DashboardLayout>
             <SidebarInset className="flex flex-col h-full">
                 {/* Header */}
-                <DashboardHeader title="Financial Goals" >
-                    
+                <DashboardHeader title="Financial Goals">
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleSyncAllGoalsProgress}
+                        disabled={isSyncLoading}
+                    >
+                        <RefreshCw className={`mr-2 h-4 w-4 ${isSyncLoading ? 'animate-spin' : ''}`} />
+                        Sync Progress
+                    </Button>
                 </DashboardHeader>
 
                 {/* Main Content */}
@@ -1661,7 +1671,7 @@ export default function GoalsPage() {
                                             )}
                                             <Button
                                                 variant="outline"
-                                                className={selectedGoal.trackingMethod === 'manual' ? '' : 'flex-1 bg-transparent'}
+                                                className={(selectedGoal.trackingMethod as string) === 'manual' ? '' : 'flex-1 bg-transparent'}
                                                 onClick={() => handleEditGoal(selectedGoal)}
                                             >
                                                 Edit Goal

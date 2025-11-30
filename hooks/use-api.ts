@@ -7,6 +7,7 @@ import {
   apiUtils,
   ApiError
 } from '../lib/api-client';
+import { eventBus, EVENTS } from '../lib/events';
 import {
   AuthSignInRequest,
   AuthSignUpRequest,
@@ -40,6 +41,15 @@ export function useApiOperation<T, P extends any[]>(
       setLoading('success');
       return result;
     } catch (err) {
+      // Check for tier limit errors and emit event
+      if (err instanceof ApiError) {
+        if (err.code === 'TIER_LIMIT_EXCEEDED') {
+          eventBus.emit(EVENTS.TIER_LIMIT_EXCEEDED, err.details);
+        } else if (err.code === 'FEATURE_NOT_AVAILABLE') {
+          eventBus.emit(EVENTS.FEATURE_LOCKED, err.details);
+        }
+      }
+
       const errorMessage = apiUtils.getErrorMessage(err);
       console.error('API error:', errorMessage);
       setError(errorMessage);
