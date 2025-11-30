@@ -16,7 +16,8 @@ function createErrorResponse(message: string, status: number = 400, code?: strin
         code: code || 'ERROR',
         message,
         timestamp: new Date().toISOString()
-      }
+      },
+      timestamp: new Date().toISOString()
     } as ApiResponse,
     { status }
   );
@@ -120,8 +121,8 @@ async function addProgressHandler(
     }
 
     // Validate required fields
-    if (typeof body.amount !== 'number') {
-      return createErrorResponse('Amount is required and must be a number', 400, 'VALIDATION_ERROR');
+    if (typeof body.amount !== 'number' || isNaN(body.amount)) {
+      return createErrorResponse('Amount is required and must be a valid number', 400, 'VALIDATION_ERROR');
     }
 
     if (!body.progressType) {

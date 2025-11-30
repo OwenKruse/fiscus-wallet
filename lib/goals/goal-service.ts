@@ -477,11 +477,15 @@ export class GoalService {
         `, [goalId]);
 
         // Delete the goal
-        const result = await client.query(`
+        if (!client.executeUpdate) {
+          throw new Error('Database client does not support executeUpdate');
+        }
+
+        const result = await client.executeUpdate(`
           DELETE FROM goals WHERE id = $1 AND user_id = $2
         `, [goalId, userId]);
 
-        if (result.length === 0) {
+        if (result.rowCount === 0) {
           throw new Error('Failed to delete goal');
         }
       });
@@ -664,8 +668,8 @@ export class GoalService {
    */
   async addManualProgress(goalId: string, userId: string, data: GoalProgressRequest): Promise<void> {
     // Validate progress data
-    if (typeof data.amount !== 'number') {
-      throw new Error('Progress amount must be a number');
+    if (typeof data.amount !== 'number' || isNaN(data.amount)) {
+      throw new Error('Progress amount must be a valid number');
     }
 
     if (!['manual_add', 'manual_subtract', 'adjustment'].includes(data.progressType)) {
@@ -685,7 +689,13 @@ export class GoalService {
         }
 
         // Calculate new current amount
-        let newCurrentAmount = goal.currentAmount;
+        // Ensure currentAmount is treated as a number (pg returns decimals as strings)
+        const currentAmount = typeof goal.currentAmount === 'string' 
+          ? parseFloat(goal.currentAmount) 
+          : Number(goal.currentAmount);
+
+        let newCurrentAmount = currentAmount;
+        
         if (data.progressType === 'manual_add') {
           newCurrentAmount += data.amount;
         } else if (data.progressType === 'manual_subtract') {
@@ -796,8 +806,12 @@ export class GoalService {
         `, [userId]);
 
         // Set the new primary goal
-        const result = await client.executeUpdate(`
-          UPDATE goals SET 
+      if (!client.executeUpdate) {
+        throw new Error('Database client does not support executeUpdate');
+      }
+
+      const result = await client.executeUpdate(`
+        UPDATE goals SET 
             is_primary = true,
             updated_at = NOW()
           WHERE id = $1 AND user_id = $2
