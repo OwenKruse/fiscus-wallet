@@ -46,7 +46,7 @@ export function AppSidebar() {
       {
         title: "Overview",
         icon: Home,
-        url: "/",
+        url: "/dashboard",
       },
       {
         title: "Analytics",
