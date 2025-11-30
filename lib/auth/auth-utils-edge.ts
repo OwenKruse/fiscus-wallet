@@ -35,11 +35,8 @@ export function hasAuthToken(request: NextRequest): boolean {
 
 // Check if path should skip authentication
 export function shouldSkipAuth(pathname: string): boolean {
-  if (pathname === '/') {
-    return true
-  }
-
   const skipPaths = [
+    '/',
     '/auth',
     '/api/auth',
     '/_next',
