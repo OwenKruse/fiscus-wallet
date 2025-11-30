@@ -27,7 +27,7 @@ export function ProtectedRoute({
         router.push(redirectTo);
       } else if (!requireAuth && isAuthenticated) {
         // User is authenticated but route is for unauthenticated users (like signin/signup)
-        router.push('/');
+        router.push('/dashboard');
       }
     }
   }, [isAuthenticated, isLoading, requireAuth, redirectTo, router]);

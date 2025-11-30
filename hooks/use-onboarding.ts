@@ -70,7 +70,7 @@ export function useOnboarding() {
 
   // Navigate to dashboard
   const completeOnboarding = useCallback(() => {
-    router.push('/')
+    router.push('/dashboard')
   }, [router])
 
   // Skip onboarding (for demo purposes)
